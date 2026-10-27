@@ -545,12 +545,15 @@
     const list = document.getElementById("structureList");
     if (list) {
       list.innerHTML = "";
+      let playNum = 0;
       levels.forEach((level, index) => {
+        if (!level.isBreak) playNum += 1;
+        const title = level.isBreak ? "Перерыв" : `Уровень ${playNum}`;
         const row = document.createElement("article");
         row.className = `level-card${level.isBreak ? " is-break-row" : ""}`;
         row.innerHTML = `
           <div class="level-card-head">
-            <strong>${level.isBreak ? "Перерыв" : `Уровень ${index + 1}`}</strong>
+            <strong>${title}</strong>
             <div class="row-actions">
               <button type="button" data-act="up" data-i="${index}" title="Вверх">↑</button>
               <button type="button" data-act="down" data-i="${index}" title="Вниз">↓</button>
@@ -627,7 +630,7 @@
     return next.map(normalizeLevel);
   }
 
-  function openSettings() {
+  function openSettings(tab = "structure") {
     draftLevels = cloneLevels(state.levels);
     $("setName").value = state.name;
     $("setPlayersTotal").value = state.playersTotal;
@@ -645,8 +648,24 @@
     fillPresetSelect();
     refreshCustomList();
     renderStructureTable(draftLevels);
-    showSettingsTab("structure");
+    showSettingsTab(tab);
+    // разблокировать аудио даже если турнир уже идёт — чтобы тесты звука работали
+    window.PokerAudio.unlock();
     els.dialog.showModal();
+  }
+
+  function testSound(kind, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    window.PokerAudio.unlock();
+    const vol = Math.max(0.35, Number($("setVolume")?.value || state.volume) / 100);
+    window.setTimeout(() => {
+      if (kind === "round") window.PokerAudio.playRoundChange(vol);
+      else if (kind === "break") window.PokerAudio.playBreak(vol);
+      else window.PokerAudio.playTournamentEnd(vol);
+    }, 30);
   }
 
   function applySettingsFromForm({ reloadPreset = false } = {}) {
@@ -835,18 +854,9 @@
   els.structureList?.addEventListener("change", onStructureChange);
   els.structureList?.addEventListener("click", onStructureClick);
 
-  $("btnTestSound").addEventListener("click", () => {
-    window.PokerAudio.unlock();
-    window.PokerAudio.playRoundChange(Number($("setVolume").value) / 100);
-  });
-  $("btnTestBreakSound").addEventListener("click", () => {
-    window.PokerAudio.unlock();
-    window.PokerAudio.playBreak(Number($("setVolume").value) / 100);
-  });
-  $("btnTestEndSound").addEventListener("click", () => {
-    window.PokerAudio.unlock();
-    window.PokerAudio.playTournamentEnd(Number($("setVolume").value) / 100);
-  });
+  $("btnTestSound").addEventListener("click", (e) => testSound("round", e));
+  $("btnTestBreakSound").addEventListener("click", (e) => testSound("break", e));
+  $("btnTestEndSound").addEventListener("click", (e) => testSound("end", e));
 
   $("btnSaveCustom").addEventListener("click", () => {
     const name = $("setCustomName").value.trim();

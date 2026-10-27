@@ -23,6 +23,7 @@
     <header class="chrome">
       <button type="button" class="chrome-link" id="btnTheme" title="Тема" aria-label="Переключить тему">Тема</button>
       <button type="button" class="chrome-link" id="btnFullscreen" title="Полный экран" aria-label="Полный экран">Экран</button>
+      <button type="button" class="chrome-link" id="btnSoundQuick" title="Проверить звук">Звук</button>
       <button type="button" class="chrome-link chrome-strong" id="btnSettings" aria-haspopup="dialog">Настройки</button>
     </header>
 
@@ -80,11 +81,11 @@
   </div>
 
   <dialog class="settings" id="settingsDialog" aria-labelledby="settingsTitle">
-    <form method="dialog" class="settings-panel" id="settingsForm">
+    <div class="settings-panel" id="settingsForm">
       <div class="settings-top">
         <header class="settings-head">
           <h2 id="settingsTitle">Настройки</h2>
-          <button type="submit" class="chrome-link" value="close" aria-label="Закрыть">Закрыть</button>
+          <button type="button" class="chrome-link" id="btnCloseSettings" aria-label="Закрыть">Закрыть</button>
         </header>
 
         <nav class="settings-tabs" role="tablist">
