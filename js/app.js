@@ -83,9 +83,16 @@
       const base = defaultState();
       const merged = { ...base, ...parsed };
       if (!Array.isArray(merged.levels) || !merged.levels.length) {
-        merged.levels = cloneLevels(window.POKER_PRESETS.regular.levels);
+        merged.levels = cloneLevels(window.POKER_PRESETS.home.levels);
       }
       merged.levels = merged.levels.map(normalizeLevel);
+      merged.levelIndex = Math.max(0, Number(merged.levelIndex) || 0);
+      merged.remainingMs = Math.max(0, Number(merged.remainingMs) || 0);
+      merged.elapsedMs = Math.max(0, Number(merged.elapsedMs) || 0);
+      merged.running = Boolean(merged.running);
+      merged.finished = Boolean(merged.finished);
+      merged.endedAt = merged.endedAt ? Number(merged.endedAt) : null;
+      merged.savedAt = merged.savedAt ? Number(merged.savedAt) : null;
       return merged;
     } catch {
       return defaultState();
@@ -93,8 +100,75 @@
   }
 
   function saveState() {
-    const toSave = { ...state, running: false, endedAt: null };
+    if (state.running && state.endedAt) {
+      state.remainingMs = Math.max(0, state.endedAt - Date.now());
+    }
+    const toSave = {
+      ...state,
+      savedAt: Date.now()
+    };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  }
+
+  /** После перезагрузки: догнать время и уровни, продолжить если шёл таймер */
+  function catchUpFromStorage() {
+    if (state.finished) {
+      state.running = false;
+      state.endedAt = null;
+      state.remainingMs = 0;
+      if (state.levelIndex < state.levels.length) {
+        state.levelIndex = state.levels.length;
+      }
+      return;
+    }
+
+    const now = Date.now();
+    if (state.savedAt && state.savedAt <= now) {
+      const away = now - state.savedAt;
+      if (state.running) state.elapsedMs += away;
+    }
+
+    if (!state.running) {
+      state.endedAt = null;
+      return;
+    }
+
+    if (!state.endedAt) {
+      state.endedAt = now + state.remainingMs;
+    }
+
+    let end = state.endedAt;
+    let guard = 0;
+    while (end <= now && guard++ < 400) {
+      if (state.levelIndex >= state.levels.length - 1) {
+        state.finished = true;
+        state.running = false;
+        state.levelIndex = state.levels.length;
+        state.remainingMs = 0;
+        state.endedAt = null;
+        if (state.soundEnabled) {
+          window.setTimeout(() => {
+            window.PokerAudio.unlock();
+            window.PokerAudio.playTournamentEnd(state.volume / 100);
+          }, 300);
+        }
+        return;
+      }
+      state.levelIndex += 1;
+      state.warningPlayedForLevel = -1;
+      end += levelDurationMs(state.levels[state.levelIndex]);
+    }
+
+    state.endedAt = end;
+    state.remainingMs = Math.max(0, end - now);
+  }
+
+  function resumeIfNeeded() {
+    if (!state.running || state.finished) return;
+    lastTick = null;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(tick);
+    requestWakeLock();
   }
 
   function normalizeLevel(l) {
@@ -843,8 +917,16 @@
     }
   });
 
-  // Init
+  // Init — восстановить турнир после перезагрузки
   applyTheme();
+  catchUpFromStorage();
   render();
+  resumeIfNeeded();
+  saveState();
+
   window.addEventListener("beforeunload", saveState);
+  window.addEventListener("pagehide", saveState);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") saveState();
+  });
 })();
