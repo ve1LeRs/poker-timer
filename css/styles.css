@@ -503,9 +503,10 @@ body.is-break .clock {
   color: var(--accent);
 }
 
-/* Settings modal — high contrast for tablet */
+/* Settings modal — Safari-safe: no transform, tabs never collapse */
 .settings {
   width: min(720px, calc(100vw - 1rem));
+  height: min(92dvh, 900px);
   max-height: min(92dvh, 900px);
   border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
   border-radius: 1.4rem;
@@ -513,31 +514,28 @@ body.is-break .clock {
   background: var(--panel);
   color: var(--text);
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5);
-  opacity: 0;
-  transform: translateY(12px) scale(0.98);
-  transition: opacity 0.28s var(--ease), transform 0.28s var(--ease);
-}
-
-.settings[open] {
-  opacity: 1;
-  transform: none;
+  overflow: hidden;
 }
 
 .settings::backdrop {
   background: rgba(4, 6, 3, 0.72);
   backdrop-filter: blur(6px);
-  opacity: 0;
-  transition: opacity 0.28s var(--ease);
 }
-
-.settings[open]::backdrop { opacity: 1; }
 
 .settings-panel {
   display: flex;
   flex-direction: column;
-  max-height: min(92dvh, 900px);
+  height: 100%;
+  max-height: 100%;
   min-height: 0;
   overflow: hidden;
+}
+
+.settings-top {
+  flex: 0 0 auto;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  z-index: 5;
 }
 
 .settings-head,
@@ -547,15 +545,14 @@ body.is-break .clock {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.15rem;
-  border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--panel-elevated) 70%, var(--panel));
-  flex: 0 0 auto;
 }
 
 .settings-foot {
-  border-bottom: 0;
+  flex: 0 0 auto;
   border-top: 1px solid var(--line);
   justify-content: flex-end;
+  z-index: 5;
 }
 
 .settings-head h2 {
@@ -568,15 +565,12 @@ body.is-break .clock {
 
 .settings-tabs {
   display: flex;
-  gap: 0.4rem;
-  padding: 0.85rem 1rem;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--line);
-  scrollbar-width: thin;
-  flex: 0 0 auto;
-  position: relative;
-  z-index: 2;
-  background: var(--panel);
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.75rem 1rem 0.9rem;
+  /* avoid overflow-x:auto on flex — WebKit can collapse height to ~0 */
+  overflow: visible;
+  min-height: 3.4rem;
 }
 
 .tab {
@@ -589,6 +583,7 @@ body.is-break .clock {
   font-size: 1rem;
   background: var(--input-bg);
   white-space: nowrap;
+  min-height: 2.75rem;
 }
 
 .tab.active {
@@ -598,13 +593,13 @@ body.is-break .clock {
 }
 
 .tab-panels {
-  padding: 1rem 1.15rem 1.4rem;
-  overflow: auto;
+  padding: 1rem 1.15rem 1.25rem;
+  overflow-x: hidden;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   flex: 1 1 auto;
   min-height: 0;
-  position: relative;
-  z-index: 1;
+  overscroll-behavior: contain;
 }
 
 .tab-panel { display: none; }

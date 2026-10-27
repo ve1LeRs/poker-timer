@@ -81,18 +81,20 @@
 
   <dialog class="settings" id="settingsDialog" aria-labelledby="settingsTitle">
     <form method="dialog" class="settings-panel" id="settingsForm">
-      <header class="settings-head">
-        <h2 id="settingsTitle">Настройки</h2>
-        <button type="submit" class="chrome-link" value="close" aria-label="Закрыть">Закрыть</button>
-      </header>
+      <div class="settings-top">
+        <header class="settings-head">
+          <h2 id="settingsTitle">Настройки</h2>
+          <button type="submit" class="chrome-link" value="close" aria-label="Закрыть">Закрыть</button>
+        </header>
 
-      <nav class="settings-tabs" role="tablist">
-        <button type="button" class="tab active" data-tab="tournament" role="tab">Турнир</button>
-        <button type="button" class="tab" data-tab="structure" role="tab">Структура</button>
-        <button type="button" class="tab" data-tab="sound" role="tab">Звук</button>
-        <button type="button" class="tab" data-tab="display" role="tab">Экран</button>
-        <button type="button" class="tab" data-tab="data" role="tab">Данные</button>
-      </nav>
+        <nav class="settings-tabs" role="tablist">
+          <button type="button" class="tab active" data-tab="tournament" role="tab">Турнир</button>
+          <button type="button" class="tab" data-tab="structure" role="tab">Структура</button>
+          <button type="button" class="tab" data-tab="sound" role="tab">Звук</button>
+          <button type="button" class="tab" data-tab="display" role="tab">Экран</button>
+          <button type="button" class="tab" data-tab="data" role="tab">Данные</button>
+        </nav>
+      </div>
 
       <div class="tab-panels">
         <section class="tab-panel active" data-panel="tournament">

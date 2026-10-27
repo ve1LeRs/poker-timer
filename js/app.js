@@ -43,7 +43,7 @@
   }
 
   function defaultState() {
-    const preset = window.POKER_PRESETS.regular;
+    const preset = window.POKER_PRESETS.home;
     return {
       name: "Домашний турнир",
       levels: cloneLevels(preset.levels),
@@ -64,7 +64,7 @@
       wakeLock: true,
       elapsedMs: 0,
       warningPlayedForLevel: -1,
-      presetId: "regular"
+      presetId: "home"
     };
   }
 
