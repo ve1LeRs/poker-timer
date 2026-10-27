@@ -766,6 +766,10 @@
     window.PokerAudio.unlock();
     window.PokerAudio.playBreak(Number($("setVolume").value) / 100);
   });
+  $("btnTestEndSound").addEventListener("click", () => {
+    window.PokerAudio.unlock();
+    window.PokerAudio.playTournamentEnd(Number($("setVolume").value) / 100);
+  });
 
   $("btnSaveCustom").addEventListener("click", () => {
     const name = $("setCustomName").value.trim();
