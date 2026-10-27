@@ -911,12 +911,6 @@
     }
   });
 
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && state.running && state.wakeLock) {
-      requestWakeLock();
-    }
-  });
-
   // Init — восстановить турнир после перезагрузки
   applyTheme();
   catchUpFromStorage();
@@ -927,6 +921,10 @@
   window.addEventListener("beforeunload", saveState);
   window.addEventListener("pagehide", saveState);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") saveState();
+    if (document.visibilityState === "hidden") {
+      saveState();
+      return;
+    }
+    if (state.running && state.wakeLock) requestWakeLock();
   });
 })();
