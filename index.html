@@ -3,96 +3,85 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b1410" />
+  <meta name="theme-color" content="#12160f" />
   <meta name="description" content="Настраиваемый блайнд-таймер для покерного турнира — уровни, перерывы, звук, пресеты." />
   <title>Poker Timer — блайнд-таймер турнира</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Chivo+Mono:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b1410'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='34' fill='%23c9a227'%3E♠%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%12160f'/%3E%3Ccircle cx='32' cy='32' r='14' fill='none' stroke='%23b7a46a' stroke-width='3'/%3E%3C/svg%3E" />
 </head>
-<body data-theme="dark" data-accent="gold">
-  <div class="bg-layer" aria-hidden="true"></div>
+<body data-theme="dark" data-accent="felt">
+  <div class="atmosphere" aria-hidden="true">
+    <div class="atmosphere-wash"></div>
+    <div class="atmosphere-grain"></div>
+    <div class="atmosphere-rim"></div>
+  </div>
 
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true">♠</span>
-      <span class="brand-name" id="tournamentName">Poker Timer</span>
-    </div>
-    <div class="topbar-actions">
-      <button type="button" class="icon-btn" id="btnTheme" title="Тема" aria-label="Переключить тему">◐</button>
-      <button type="button" class="icon-btn" id="btnFullscreen" title="Полный экран" aria-label="Полный экран">⛶</button>
-      <button type="button" class="btn btn-ghost" id="btnSettings" aria-haspopup="dialog">Настройки</button>
-    </div>
-  </header>
+  <div class="stage" id="board">
+    <header class="chrome">
+      <button type="button" class="chrome-link" id="btnTheme" title="Тема" aria-label="Переключить тему">Тема</button>
+      <button type="button" class="chrome-link" id="btnFullscreen" title="Полный экран" aria-label="Полный экран">Экран</button>
+      <button type="button" class="chrome-link chrome-strong" id="btnSettings" aria-haspopup="dialog">Настройки</button>
+    </header>
 
-  <main class="board" id="board">
-    <section class="level-meta">
-      <p class="eyebrow" id="levelLabel">Уровень 1</p>
-      <p class="status-pill" id="statusPill">Готов</p>
-    </section>
+    <main class="play">
+      <p class="brand" id="tournamentName">Poker Timer</p>
 
-    <section class="clock-block" aria-live="polite">
-      <div class="clock" id="clock">15:00</div>
-      <div class="progress" aria-hidden="true">
-        <div class="progress-fill" id="progressFill"></div>
-      </div>
-    </section>
+      <p class="level-line">
+        <span id="levelLabel">Уровень 1</span>
+        <span class="level-dot" aria-hidden="true"></span>
+        <span class="status-pill" id="statusPill">Готов</span>
+      </p>
 
-    <section class="blinds-block">
-      <div class="blind-main">
-        <span class="blind-label" id="blindsLabel">Блайнды</span>
-        <span class="blind-value" id="blindsValue">25 / 50</span>
-      </div>
-      <div class="blind-ante" id="anteWrap">
-        <span class="blind-label">Анте</span>
-        <span class="blind-value ante" id="anteValue">—</span>
-      </div>
-    </section>
+      <section class="clock-block" aria-live="polite">
+        <div class="clock" id="clock">15:00</div>
+        <div class="progress" aria-hidden="true">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </section>
 
-    <section class="next-block">
-      <span class="next-label">Далее</span>
-      <span class="next-value" id="nextValue">50 / 100 · 15:00</span>
-    </section>
+      <section class="blinds-line">
+        <span class="blinds-kicker" id="blindsLabel">Блайнды</span>
+        <span class="blinds-value" id="blindsValue">25 / 50</span>
+        <span class="ante-inline">
+          <span class="blinds-kicker">анте</span>
+          <span class="ante-value" id="anteValue">—</span>
+        </span>
+      </section>
 
-    <section class="stats-row">
-      <div class="stat">
-        <span class="stat-label">Игроки</span>
-        <span class="stat-value" id="playersValue">9 / 9</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Средний стек</span>
-        <span class="stat-value" id="avgStackValue">10 000</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Прошло</span>
-        <span class="stat-value" id="elapsedValue">00:00</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Осталось</span>
-        <span class="stat-value" id="remainingValue">—</span>
-      </div>
-    </section>
+      <p class="next-line">
+        <span class="next-kicker">Далее</span>
+        <span id="nextValue">50 / 100 · 15 мин</span>
+      </p>
 
-    <section class="controls">
-      <button type="button" class="ctrl" id="btnPrev" title="Предыдущий уровень">⏮</button>
-      <button type="button" class="ctrl ctrl-primary" id="btnPlay" title="Старт / Пауза">▶</button>
-      <button type="button" class="ctrl" id="btnNext" title="Следующий уровень">⏭</button>
-      <button type="button" class="ctrl" id="btnSkip" title="Пропустить уровень">⏩</button>
-      <div class="player-edit">
-        <button type="button" class="ctrl small" id="btnPlayerMinus" title="Игрок выбыл">−</button>
-        <span class="player-edit-label">игроки</span>
-        <button type="button" class="ctrl small" id="btnPlayerPlus" title="Добавить игрока">+</button>
+      <p class="meta-line">
+        <span><span class="meta-kicker">Игроки</span> <span id="playersValue">9 / 9</span></span>
+        <span><span class="meta-kicker">Стек</span> <span id="avgStackValue">10 000</span></span>
+        <span><span class="meta-kicker">Прошло</span> <span id="elapsedValue">00:00</span></span>
+        <span><span class="meta-kicker">Осталось</span> <span id="remainingValue">—</span></span>
+      </p>
+    </main>
+
+    <footer class="dock">
+      <button type="button" class="dock-btn" id="btnPrev" title="Предыдущий уровень">Назад</button>
+      <button type="button" class="dock-btn dock-main" id="btnPlay" title="Старт / Пауза">Старт</button>
+      <button type="button" class="dock-btn" id="btnNext" title="Следующий уровень">Далее</button>
+      <button type="button" class="dock-btn dock-quiet" id="btnSkip" title="Пропустить уровень">Пропуск</button>
+      <div class="dock-players" aria-label="Игроки в игре">
+        <button type="button" class="dock-btn dock-mini" id="btnPlayerMinus" title="Игрок выбыл">−</button>
+        <span>игроки</span>
+        <button type="button" class="dock-btn dock-mini" id="btnPlayerPlus" title="Добавить игрока">+</button>
       </div>
-    </section>
-  </main>
+    </footer>
+  </div>
 
   <dialog class="settings" id="settingsDialog" aria-labelledby="settingsTitle">
     <form method="dialog" class="settings-panel" id="settingsForm">
       <header class="settings-head">
         <h2 id="settingsTitle">Настройки</h2>
-        <button type="submit" class="icon-btn" value="close" aria-label="Закрыть">✕</button>
+        <button type="submit" class="chrome-link" value="close" aria-label="Закрыть">Закрыть</button>
       </header>
 
       <nav class="settings-tabs" role="tablist">
@@ -186,8 +175,8 @@
           <label class="field">
             <span>Акцент</span>
             <select id="setAccent">
-              <option value="gold">Золото</option>
               <option value="felt">Сукно</option>
+              <option value="gold">Золото</option>
               <option value="crimson">Бордо</option>
               <option value="sky">Лёд</option>
             </select>

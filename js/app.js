@@ -58,7 +58,7 @@
       warningSeconds: 30,
       warningSound: true,
       theme: "dark",
-      accent: "gold",
+      accent: "felt",
       clockFormat: "mm:ss",
       wakeLock: true,
       elapsedMs: 0,
@@ -165,8 +165,15 @@
     document.body.dataset.accent = state.accent;
     document.querySelector('meta[name="theme-color"]')?.setAttribute(
       "content",
-      state.theme === "light" ? "#e9efe6" : "#0b1410"
+      state.theme === "light" ? "#e7eadf" : "#0e120c"
     );
+  }
+
+  function flashLevelChange() {
+    document.body.classList.remove("is-level-flash");
+    void document.body.offsetWidth;
+    document.body.classList.add("is-level-flash");
+    window.setTimeout(() => document.body.classList.remove("is-level-flash"), 600);
   }
 
   function render() {
@@ -239,7 +246,12 @@
       els.statusPill.textContent = "Готов";
     }
 
-    els.btnPlay.textContent = state.running ? "⏸" : "▶";
+    const paused =
+      !state.running &&
+      (state.elapsedMs > 0 || state.levelIndex > 0 || (level && state.remainingMs < levelDurationMs(level)));
+    document.body.classList.toggle("is-paused", Boolean(paused));
+
+    els.btnPlay.textContent = state.running ? "Пауза" : "Старт";
     els.btnPlay.title = state.running ? "Пауза" : "Старт";
   }
 
@@ -262,9 +274,8 @@
     }
     if (auto && state.soundEnabled) {
       window.PokerAudio.playLevelChange(state.volume / 100, Boolean(state.levels[index].isBreak));
-    } else if (!auto && prev) {
-      // manual navigation: no sound required
     }
+    flashLevelChange();
     render();
     saveState();
   }
