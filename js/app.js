@@ -713,10 +713,8 @@
     renderStructureTable(draftLevels);
   }
 
-  els.structureBody?.addEventListener("change", onStructureChange);
-  els.structureBody?.addEventListener("click", onStructureClick);
-  document.getElementById("structureList")?.addEventListener("change", onStructureChange);
-  document.getElementById("structureList")?.addEventListener("click", onStructureClick);
+  els.structureList?.addEventListener("change", onStructureChange);
+  els.structureList?.addEventListener("click", onStructureClick);
 
   $("btnTestSound").addEventListener("click", () => {
     window.PokerAudio.unlock();
