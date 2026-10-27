@@ -383,6 +383,42 @@
       if (p.id === state.presetId) opt.selected = true;
       els.setPreset.appendChild(opt);
     });
+    renderPresetChips();
+  }
+
+  function renderPresetChips() {
+    const wrap = $("presetChips");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    Object.values(window.POKER_PRESETS).forEach((p) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `preset-chip${p.id === state.presetId ? " is-active" : ""}`;
+      btn.dataset.id = p.id;
+      btn.textContent = p.name;
+      btn.addEventListener("click", () => loadPreset(p.id));
+      wrap.appendChild(btn);
+    });
+  }
+
+  function loadPreset(id) {
+    const preset = window.POKER_PRESETS[id];
+    if (!preset) return;
+    draftLevels = cloneLevels(preset.levels);
+    state.presetId = preset.id;
+    $("setStartStack").value = preset.startStack;
+    if (els.setPreset) els.setPreset.value = preset.id;
+    renderStructureTable(draftLevels);
+    renderPresetChips();
+  }
+
+  function showSettingsTab(name) {
+    document.querySelectorAll(".settings-tabs .tab").forEach((t) => {
+      t.classList.toggle("active", t.dataset.tab === name);
+    });
+    document.querySelectorAll(".tab-panel").forEach((p) => {
+      p.classList.toggle("active", p.dataset.panel === name);
+    });
   }
 
   function loadCustoms() {
@@ -520,18 +556,13 @@
     fillPresetSelect();
     refreshCustomList();
     renderStructureTable(draftLevels);
+    showSettingsTab("structure");
     els.dialog.showModal();
   }
 
   function applySettingsFromForm({ reloadPreset = false } = {}) {
     if (reloadPreset) {
-      const preset = window.POKER_PRESETS[$("setPreset").value];
-      if (preset) {
-        draftLevels = cloneLevels(preset.levels);
-        $("setStartStack").value = preset.startStack;
-        state.presetId = preset.id;
-        renderStructureTable(draftLevels);
-      }
+      loadPreset($("setPreset").value);
       return;
     }
 
@@ -652,12 +683,7 @@
   });
 
   document.querySelectorAll(".settings-tabs .tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".settings-tabs .tab").forEach((t) => t.classList.remove("active"));
-      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-      tab.classList.add("active");
-      document.querySelector(`[data-panel="${tab.dataset.tab}"]`)?.classList.add("active");
-    });
+    tab.addEventListener("click", () => showSettingsTab(tab.dataset.tab));
   });
 
   $("btnApplySettings").addEventListener("click", () => applySettingsFromForm());
