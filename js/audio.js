@@ -105,6 +105,42 @@ window.PokerAudio = (function () {
     tone(988, 0.32, 0.12, "square", v * 0.14);
   }
 
+  let endAudio = null;
+
+  function getEndAudio() {
+    if (!endAudio) {
+      endAudio = new Audio("sounds/applause-end.mp3");
+      endAudio.preload = "auto";
+    }
+    return endAudio;
+  }
+
+  /** Аплодисменты в конце турнира (файл Mixkit, royalty-free) */
+  function playTournamentEnd(volume) {
+    const v = Math.max(0, Math.min(1, volume));
+    if (v <= 0) return;
+    unlock();
+    try {
+      const audio = getEndAudio();
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = Math.min(1, v * 0.95);
+      const playPromise = audio.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {
+          // fallback: синтетический фанфарный хвост, если файл не загрузился
+          tone(523.25, 0, 0.2, "square", v * 0.35);
+          tone(659.25, 0.18, 0.25, "square", v * 0.4);
+          tone(783.99, 0.4, 0.55, "triangle", v * 0.45);
+          noiseBurst(0.1, 0.4, v * 0.2);
+        });
+      }
+    } catch {
+      tone(523.25, 0, 0.25, "square", v * 0.4);
+      tone(659.25, 0.2, 0.3, "triangle", v * 0.45);
+    }
+  }
+
   function unlock() {
     const audio = ensure();
     if (!audio) return;
@@ -116,7 +152,28 @@ window.PokerAudio = (function () {
     gain.connect(audio.destination);
     osc.start();
     osc.stop(audio.currentTime + 0.01);
+    // прогрев HTMLAudio на iOS после жеста
+    try {
+      const end = getEndAudio();
+      end.muted = true;
+      end.play().then(() => {
+        end.pause();
+        end.currentTime = 0;
+        end.muted = false;
+      }).catch(() => {
+        end.muted = false;
+      });
+    } catch {
+      /* ignore */
+    }
   }
 
-  return { playLevelChange, playRoundChange, playBreak, playWarning, unlock };
+  return {
+    playLevelChange,
+    playRoundChange,
+    playBreak,
+    playWarning,
+    playTournamentEnd,
+    unlock
+  };
 })();

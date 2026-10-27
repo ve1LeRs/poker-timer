@@ -64,7 +64,8 @@
       wakeLock: true,
       elapsedMs: 0,
       warningPlayedForLevel: -1,
-      presetId: "home"
+      presetId: "home",
+      finished: false
     };
   }
 
@@ -256,16 +257,30 @@
     els.btnPlay.title = state.running ? "Пауза" : "Старт";
   }
 
+  function finishTournament() {
+    const alreadyDone = state.finished === true;
+    pause();
+    state.finished = true;
+    state.levelIndex = state.levels.length;
+    state.remainingMs = 0;
+    state.endedAt = null;
+    if (!alreadyDone && state.soundEnabled) {
+      window.PokerAudio.unlock();
+      window.PokerAudio.playTournamentEnd(state.volume / 100);
+    }
+    flashLevelChange();
+    render();
+    saveState();
+  }
+
   function goToLevel(index, { auto = false, silent = false } = {}) {
     if (index < 0 || index >= state.levels.length) {
       if (index >= state.levels.length) {
-        pause();
-        state.remainingMs = 0;
-        render();
-        saveState();
+        finishTournament();
       }
       return;
     }
+    state.finished = false;
     const changed = index !== state.levelIndex;
     state.levelIndex = index;
     state.remainingMs = levelDurationMs(state.levels[index]);
@@ -287,10 +302,7 @@
 
   function advanceLevel() {
     if (state.levelIndex >= state.levels.length - 1) {
-      pause();
-      state.remainingMs = 0;
-      render();
-      saveState();
+      finishTournament();
       return;
     }
     goToLevel(state.levelIndex + 1, { auto: true });
