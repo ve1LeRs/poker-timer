@@ -256,7 +256,7 @@
     els.btnPlay.title = state.running ? "Пауза" : "Старт";
   }
 
-  function goToLevel(index, { auto = false } = {}) {
+  function goToLevel(index, { auto = false, silent = false } = {}) {
     if (index < 0 || index >= state.levels.length) {
       if (index >= state.levels.length) {
         pause();
@@ -266,17 +266,21 @@
       }
       return;
     }
-    const prev = currentLevel();
+    const changed = index !== state.levelIndex;
     state.levelIndex = index;
     state.remainingMs = levelDurationMs(state.levels[index]);
     state.warningPlayedForLevel = -1;
     if (state.running) {
       state.endedAt = Date.now() + state.remainingMs;
     }
-    if (auto && state.soundEnabled) {
-      window.PokerAudio.playLevelChange(state.volume / 100, Boolean(state.levels[index].isBreak));
+    if (changed && !silent && state.soundEnabled) {
+      window.PokerAudio.unlock();
+      window.PokerAudio.playLevelChange(
+        state.volume / 100,
+        Boolean(state.levels[index].isBreak)
+      );
     }
-    flashLevelChange();
+    if (changed) flashLevelChange();
     render();
     saveState();
   }
@@ -718,7 +722,9 @@
 
   $("btnTestSound").addEventListener("click", () => {
     window.PokerAudio.unlock();
-    window.PokerAudio.playLevelChange(Number($("setVolume").value) / 100, false);
+    const vol = Number($("setVolume").value) / 100;
+    window.PokerAudio.playRoundChange(vol);
+    window.setTimeout(() => window.PokerAudio.playBreak(vol), 900);
   });
 
   $("btnSaveCustom").addEventListener("click", () => {

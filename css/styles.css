@@ -536,6 +536,8 @@ body.is-break .clock {
   display: flex;
   flex-direction: column;
   max-height: min(92dvh, 900px);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .settings-head,

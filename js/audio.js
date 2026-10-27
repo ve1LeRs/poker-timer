@@ -7,52 +7,108 @@ window.PokerAudio = (function () {
       if (!AC) return null;
       ctx = new AC();
     }
-    if (ctx.state === "suspended") ctx.resume();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
     return ctx;
   }
 
-  function tone(freq, start, dur, type, gainValue) {
+  function tone(freq, start, dur, type, gainValue, glideTo) {
     const audio = ensure();
     if (!audio) return;
     const osc = audio.createOscillator();
     const gain = audio.createGain();
+    const t0 = audio.currentTime + start;
     osc.type = type || "sine";
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.0001, audio.currentTime + start);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, gainValue), audio.currentTime + start + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + start + dur);
+    osc.frequency.setValueAtTime(freq, t0);
+    if (glideTo) {
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, glideTo), t0 + dur);
+    }
+    const g = Math.max(0.0001, gainValue);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(g, t0 + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + Math.max(0.05, dur));
     osc.connect(gain);
     gain.connect(audio.destination);
-    osc.start(audio.currentTime + start);
-    osc.stop(audio.currentTime + start + dur + 0.02);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.04);
   }
 
-  function playLevelChange(volume, isBreak) {
+  function noiseBurst(start, dur, gainValue) {
+    const audio = ensure();
+    if (!audio) return;
+    const len = Math.max(1, Math.floor(audio.sampleRate * dur));
+    const buffer = audio.createBuffer(1, len, audio.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    }
+    const src = audio.createBufferSource();
+    const filter = audio.createBiquadFilter();
+    const gain = audio.createGain();
+    const t0 = audio.currentTime + start;
+    src.buffer = buffer;
+    filter.type = "lowpass";
+    filter.frequency.value = 900;
+    gain.gain.setValueAtTime(Math.max(0.0001, gainValue), t0);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(audio.destination);
+    src.start(t0);
+    src.stop(t0 + dur + 0.02);
+  }
+
+  /** Яркий сигнал смены игрового уровня / раунда */
+  function playRoundChange(volume) {
     const v = Math.max(0, Math.min(1, volume));
     if (v <= 0) return;
     ensure();
-    if (isBreak) {
-      tone(220, 0, 0.35, "triangle", v * 0.45);
-      tone(330, 0.28, 0.4, "triangle", v * 0.4);
-      tone(440, 0.55, 0.55, "sine", v * 0.5);
-    } else {
-      tone(523.25, 0, 0.18, "sine", v * 0.5);
-      tone(659.25, 0.16, 0.2, "sine", v * 0.45);
-      tone(783.99, 0.34, 0.35, "triangle", v * 0.55);
-    }
+    tone(392, 0, 0.12, "square", v * 0.28);
+    tone(523.25, 0.11, 0.14, "square", v * 0.3);
+    tone(659.25, 0.24, 0.16, "triangle", v * 0.34);
+    tone(783.99, 0.38, 0.42, "sine", v * 0.4);
+    noiseBurst(0.05, 0.08, v * 0.08);
+  }
+
+  /** Гонг на перерыв — ниже и дольше */
+  function playBreak(volume) {
+    const v = Math.max(0, Math.min(1, volume));
+    if (v <= 0) return;
+    ensure();
+    tone(196, 0, 0.7, "sine", v * 0.42, 140);
+    tone(246.94, 0.08, 0.75, "triangle", v * 0.28, 160);
+    tone(164.81, 0.35, 0.85, "sine", v * 0.32);
+    tone(130.81, 0.55, 0.9, "triangle", v * 0.22);
+    noiseBurst(0.02, 0.18, v * 0.1);
+  }
+
+  function playLevelChange(volume, isBreak) {
+    if (isBreak) playBreak(volume);
+    else playRoundChange(volume);
   }
 
   function playWarning(volume) {
     const v = Math.max(0, Math.min(1, volume));
     if (v <= 0) return;
     ensure();
-    tone(880, 0, 0.12, "square", v * 0.22);
-    tone(880, 0.18, 0.12, "square", v * 0.18);
+    tone(880, 0, 0.1, "square", v * 0.2);
+    tone(880, 0.16, 0.1, "square", v * 0.16);
+    tone(988, 0.32, 0.12, "square", v * 0.14);
   }
 
   function unlock() {
-    ensure();
+    const audio = ensure();
+    if (!audio) return;
+    // тихий тик — разблокировка автозвука в Safari/iOS
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    gain.gain.value = 0.00001;
+    osc.connect(gain);
+    gain.connect(audio.destination);
+    osc.start();
+    osc.stop(audio.currentTime + 0.01);
   }
 
-  return { playLevelChange, playWarning, unlock };
+  return { playLevelChange, playRoundChange, playBreak, playWarning, unlock };
 })();
