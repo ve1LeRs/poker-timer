@@ -81,21 +81,21 @@ window.POKER_PRESETS = {
     name: "Домашняя",
     startStack: 5000,
     levels: [
-      { duration: 12, sb: 5, bb: 10, ante: 0, isBreak: false },
-      { duration: 12, sb: 10, bb: 20, ante: 0, isBreak: false },
-      { duration: 12, sb: 15, bb: 30, ante: 0, isBreak: false },
+      { duration: 12, sb: 5, bb: 10, ante: 10, isBreak: false },
+      { duration: 12, sb: 10, bb: 20, ante: 20, isBreak: false },
+      { duration: 12, sb: 15, bb: 30, ante: 30, isBreak: false },
       { duration: 15, sb: 0, bb: 0, ante: 0, isBreak: true },
-      { duration: 12, sb: 25, bb: 50, ante: 0, isBreak: false },
-      { duration: 12, sb: 50, bb: 100, ante: 0, isBreak: false },
-      { duration: 12, sb: 75, bb: 150, ante: 0, isBreak: false },
+      { duration: 12, sb: 25, bb: 50, ante: 50, isBreak: false },
+      { duration: 12, sb: 50, bb: 100, ante: 100, isBreak: false },
+      { duration: 12, sb: 75, bb: 150, ante: 150, isBreak: false },
       { duration: 15, sb: 0, bb: 0, ante: 0, isBreak: true },
-      { duration: 12, sb: 100, bb: 200, ante: 0, isBreak: false },
-      { duration: 12, sb: 150, bb: 300, ante: 0, isBreak: false },
-      { duration: 12, sb: 250, bb: 500, ante: 0, isBreak: false },
+      { duration: 12, sb: 100, bb: 200, ante: 200, isBreak: false },
+      { duration: 12, sb: 150, bb: 300, ante: 300, isBreak: false },
+      { duration: 12, sb: 250, bb: 500, ante: 500, isBreak: false },
       { duration: 15, sb: 0, bb: 0, ante: 0, isBreak: true },
-      { duration: 12, sb: 400, bb: 800, ante: 0, isBreak: false },
-      { duration: 12, sb: 600, bb: 1200, ante: 0, isBreak: false },
-      { duration: 12, sb: 1000, bb: 2000, ante: 0, isBreak: false }
+      { duration: 12, sb: 400, bb: 800, ante: 800, isBreak: false },
+      { duration: 12, sb: 600, bb: 1200, ante: 1200, isBreak: false },
+      { duration: 12, sb: 1000, bb: 2000, ante: 2000, isBreak: false }
     ]
   }
 };
