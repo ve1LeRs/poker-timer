@@ -508,6 +508,7 @@
     document.querySelectorAll(".tab-panel").forEach((p) => {
       p.classList.toggle("active", p.dataset.panel === name);
     });
+    if (name === "sound") window.PokerAudio.unlock();
   }
 
   function loadCustoms() {
@@ -775,7 +776,9 @@
     saveState();
   });
 
-  els.btnSettings.addEventListener("click", openSettings);
+  els.btnSettings.addEventListener("click", () => openSettings("structure"));
+  $("btnSoundQuick")?.addEventListener("click", () => openSettings("sound"));
+  $("btnCloseSettings")?.addEventListener("click", () => els.dialog.close());
   els.btnTheme.addEventListener("click", () => {
     state.theme = state.theme === "dark" ? "light" : "dark";
     applyTheme();
