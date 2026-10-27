@@ -339,8 +339,11 @@
     state.remainingMs = 0;
     state.endedAt = null;
     if (!alreadyDone && state.soundEnabled) {
+      // сначала unlock в том же тике жеста/таймера, потом финишный звук
       window.PokerAudio.unlock();
-      window.PokerAudio.playTournamentEnd(state.volume / 100);
+      window.setTimeout(() => {
+        window.PokerAudio.playTournamentEnd(Math.max(0.35, state.volume / 100));
+      }, 40);
     }
     flashLevelChange();
     render();

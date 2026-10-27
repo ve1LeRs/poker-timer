@@ -1,5 +1,7 @@
 window.PokerAudio = (function () {
   let ctx = null;
+  let endAudio = null;
+  let endPrimed = false;
 
   function ensure() {
     if (!ctx) {
@@ -59,6 +61,31 @@ window.PokerAudio = (function () {
     src.stop(t0 + dur + 0.02);
   }
 
+  function applauseUrl() {
+    try {
+      return new URL("sounds/applause-end.mp3", window.location.href).href;
+    } catch {
+      return "sounds/applause-end.mp3";
+    }
+  }
+
+  function getEndAudio() {
+    if (!endAudio) {
+      const existing = document.getElementById("endApplause");
+      endAudio = existing || new Audio(applauseUrl());
+      if (!existing) {
+        endAudio.preload = "auto";
+        endAudio.setAttribute("playsinline", "");
+        endAudio.setAttribute("webkit-playsinline", "");
+      }
+      // на случай относительного src у <audio>
+      if (existing && (!existing.src || existing.src.endsWith("/"))) {
+        existing.src = applauseUrl();
+      }
+    }
+    return endAudio;
+  }
+
   /** Яркий сигнал смены игрового уровня / раунда */
   function playRoundChange(volume) {
     const v = Math.max(0, Math.min(1, volume));
@@ -79,14 +106,12 @@ window.PokerAudio = (function () {
     const hits = [0, 0.38, 0.76];
     hits.forEach((at, i) => {
       const punch = v * (0.72 - i * 0.06);
-      // низкий «тарелочный» удар
       tone(110, at, 0.55, "sine", punch, 70);
       tone(165, at + 0.01, 0.45, "triangle", punch * 0.85, 95);
       tone(220, at + 0.02, 0.28, "square", punch * 0.35);
       tone(330, at + 0.03, 0.22, "sawtooth", punch * 0.18);
       noiseBurst(at, 0.22, punch * 0.28);
     });
-    // финальный длинный хвост
     tone(98, 1.05, 1.1, "sine", v * 0.55, 55);
     tone(147, 1.08, 0.95, "triangle", v * 0.4, 80);
   }
@@ -105,66 +130,104 @@ window.PokerAudio = (function () {
     tone(988, 0.32, 0.12, "square", v * 0.14);
   }
 
-  let endAudio = null;
-
-  function getEndAudio() {
-    if (!endAudio) {
-      endAudio = new Audio("sounds/applause-end.mp3");
-      endAudio.preload = "auto";
-    }
-    return endAudio;
+  function playFinishFanfare(volume) {
+    const v = Math.max(0, Math.min(1, volume));
+    if (v <= 0) return;
+    ensure();
+    tone(392, 0, 0.18, "square", v * 0.45);
+    tone(523.25, 0.16, 0.2, "square", v * 0.5);
+    tone(659.25, 0.34, 0.22, "triangle", v * 0.55);
+    tone(783.99, 0.55, 0.55, "sine", v * 0.6);
+    tone(1046.5, 0.75, 0.7, "triangle", v * 0.4);
+    noiseBurst(0.2, 0.35, v * 0.22);
   }
 
-  /** Аплодисменты в конце турнира (файл Mixkit, royalty-free) */
+  function playApplauseFile(volume) {
+    const v = Math.max(0, Math.min(1, volume));
+    const src = getEndAudio();
+    src.muted = false;
+    src.volume = Math.min(1, Math.max(0.15, v));
+    try {
+      src.pause();
+    } catch {
+      /* ignore */
+    }
+    try {
+      src.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+
+    // cloneNode надёжнее на iOS: отдельный элемент не конфликтует с prime/unlock
+    const clip = src.cloneNode(true);
+    clip.muted = false;
+    clip.volume = src.volume;
+    clip.setAttribute("playsinline", "");
+    const start = () => {
+      const p = clip.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(() => {
+          src.muted = false;
+          src.volume = clip.volume;
+          src.play().catch(() => {});
+        });
+      }
+    };
+    if (clip.readyState >= 2) start();
+    else {
+      clip.addEventListener("canplaythrough", start, { once: true });
+      clip.load();
+      // запасной старт, если событие не пришло
+      window.setTimeout(start, 250);
+    }
+  }
+
+  /** Финиш турнира: фанфары + аплодисменты */
   function playTournamentEnd(volume) {
     const v = Math.max(0, Math.min(1, volume));
     if (v <= 0) return;
-    unlock();
-    try {
-      const audio = getEndAudio();
-      audio.pause();
-      audio.currentTime = 0;
-      audio.volume = Math.min(1, v * 0.95);
-      const playPromise = audio.play();
-      if (playPromise && typeof playPromise.catch === "function") {
-        playPromise.catch(() => {
-          // fallback: синтетический фанфарный хвост, если файл не загрузился
-          tone(523.25, 0, 0.2, "square", v * 0.35);
-          tone(659.25, 0.18, 0.25, "square", v * 0.4);
-          tone(783.99, 0.4, 0.55, "triangle", v * 0.45);
-          noiseBurst(0.1, 0.4, v * 0.2);
-        });
-      }
-    } catch {
-      tone(523.25, 0, 0.25, "square", v * 0.4);
-      tone(659.25, 0.2, 0.3, "triangle", v * 0.45);
-    }
+    ensure();
+    playFinishFanfare(v);
+    // аплодисменты чуть позже фанфар, чтобы было слышно оба
+    window.setTimeout(() => playApplauseFile(v), 450);
   }
 
   function unlock() {
     const audio = ensure();
-    if (!audio) return;
-    // тихий тик — разблокировка автозвука в Safari/iOS
-    const osc = audio.createOscillator();
-    const gain = audio.createGain();
-    gain.gain.value = 0.00001;
-    osc.connect(gain);
-    gain.connect(audio.destination);
-    osc.start();
-    osc.stop(audio.currentTime + 0.01);
-    // прогрев HTMLAudio на iOS после жеста
-    try {
-      const end = getEndAudio();
-      end.muted = true;
-      end.play().then(() => {
-        end.pause();
-        end.currentTime = 0;
-        end.muted = false;
-      }).catch(() => {
-        end.muted = false;
-      });
-    } catch {
-      /* ignore */
+    if (audio) {
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      gain.gain.value = 0.00001;
+      osc.connect(gain);
+      gain.connect(audio.destination);
+      osc.start();
+      osc.stop(audio.currentTime + 0.01);
+    }
+    // прогрев файла аплодисментов один раз — без паузы «боевого» воспроизведения
+    if (!endPrimed) {
+      endPrimed = true;
+      try {
+        const end = getEndAudio();
+        end.muted = true;
+        end.volume = 0.01;
+        const p = end.play();
+        if (p && typeof p.then === "function") {
+          p.then(() => {
+            end.pause();
+            end.currentTime = 0;
+            end.muted = false;
+            end.volume = 1;
+          }).catch(() => {
+            end.muted = false;
+            end.volume = 1;
+          });
+        } else {
+          end.muted = false;
+          end.volume = 1;
+        }
+      } catch {
+        /* ignore */
+      }
     }
   }
 
