@@ -569,6 +569,26 @@ body.is-break .clock {
   letter-spacing: -0.03em;
 }
 
+#btnCloseSettings {
+  position: relative;
+  z-index: 6;
+  min-height: 2.75rem;
+  min-width: 5.5rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
+  border-radius: 999px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+#btnCloseSettings:active {
+  background: var(--accent-soft);
+}
+
 .settings-tabs {
   display: flex;
   flex-wrap: wrap;

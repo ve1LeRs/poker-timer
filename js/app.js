@@ -631,6 +631,29 @@
     return next.map(normalizeLevel);
   }
 
+  function closeSettings(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const dialog = els.dialog;
+    if (!dialog) return;
+    try {
+      if (typeof dialog.close === "function") dialog.close();
+    } catch {
+      /* ignore */
+    }
+    // Safari/iPad иногда оставляет dialog открытым — принудительно
+    dialog.removeAttribute("open");
+    if (dialog.open) {
+      try {
+        dialog.open = false;
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   function openSettings(tab = "structure") {
     draftLevels = cloneLevels(state.levels);
     $("setName").value = state.name;
@@ -652,7 +675,7 @@
     showSettingsTab(tab);
     // разблокировать аудио даже если турнир уже идёт — чтобы тесты звука работали
     window.PokerAudio.unlock();
-    els.dialog.showModal();
+    if (!els.dialog.open) els.dialog.showModal();
   }
 
   function testSound(kind, event) {
@@ -704,7 +727,7 @@
     applyTheme();
     render();
     saveState();
-    els.dialog.close();
+    closeSettings();
   }
 
   function exportJson() {
@@ -778,7 +801,19 @@
 
   els.btnSettings.addEventListener("click", () => openSettings("structure"));
   $("btnSoundQuick")?.addEventListener("click", () => openSettings("sound"));
-  $("btnCloseSettings")?.addEventListener("click", () => els.dialog.close());
+  const closeBtn = $("btnCloseSettings");
+  // pointerup надёжнее click на iPad (иногда click теряется)
+  ["pointerup", "click"].forEach((evt) => {
+    closeBtn?.addEventListener(evt, closeSettings);
+  });
+  els.dialog.addEventListener("cancel", (e) => {
+    e.preventDefault();
+    closeSettings();
+  });
+  els.dialog.addEventListener("click", (e) => {
+    // тап по затемнению (backdrop) — закрыть
+    if (e.target === els.dialog) closeSettings(e);
+  });
   els.btnTheme.addEventListener("click", () => {
     state.theme = state.theme === "dark" ? "light" : "dark";
     applyTheme();
