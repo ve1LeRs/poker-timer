@@ -158,8 +158,11 @@
             <span>Звук предупреждения</span>
             <input type="checkbox" id="setWarningSound" />
           </label>
-          <p class="hint">При смене раунда — короткий сигнал. На перерыве — гонг. Звук также играет при кнопках «Далее» / «Пропуск».</p>
-          <button type="button" class="btn btn-ghost" id="btnTestSound">Проверить: раунд + перерыв</button>
+          <p class="hint">Раунд — короткий сигнал. Перерыв — громкий тройной гонг. Звук также при «Далее» / «Пропуск».</p>
+          <div class="inline-actions wrap">
+            <button type="button" class="btn btn-ghost" id="btnTestSound">Проверить раунд</button>
+            <button type="button" class="btn btn-ghost" id="btnTestBreakSound">Проверить перерыв</button>
+          </div>
         </section>
 
         <section class="tab-panel" data-panel="display">

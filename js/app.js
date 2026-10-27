@@ -748,9 +748,11 @@
 
   $("btnTestSound").addEventListener("click", () => {
     window.PokerAudio.unlock();
-    const vol = Number($("setVolume").value) / 100;
-    window.PokerAudio.playRoundChange(vol);
-    window.setTimeout(() => window.PokerAudio.playBreak(vol), 900);
+    window.PokerAudio.playRoundChange(Number($("setVolume").value) / 100);
+  });
+  $("btnTestBreakSound").addEventListener("click", () => {
+    window.PokerAudio.unlock();
+    window.PokerAudio.playBreak(Number($("setVolume").value) / 100);
   });
 
   $("btnSaveCustom").addEventListener("click", () => {

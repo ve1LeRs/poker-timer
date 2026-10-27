@@ -745,6 +745,7 @@ body.is-break .clock {
 .structure-list {
   display: grid;
   gap: 0.75rem;
+  padding-bottom: 0.5rem;
 }
 
 .level-card {

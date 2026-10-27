@@ -71,16 +71,24 @@ window.PokerAudio = (function () {
     noiseBurst(0.05, 0.08, v * 0.08);
   }
 
-  /** Гонг на перерыв — ниже и дольше */
+  /** Гонг перерыва — три удара, громче и заметно иначе, чем смена раунда */
   function playBreak(volume) {
     const v = Math.max(0, Math.min(1, volume));
     if (v <= 0) return;
     ensure();
-    tone(196, 0, 0.7, "sine", v * 0.42, 140);
-    tone(246.94, 0.08, 0.75, "triangle", v * 0.28, 160);
-    tone(164.81, 0.35, 0.85, "sine", v * 0.32);
-    tone(130.81, 0.55, 0.9, "triangle", v * 0.22);
-    noiseBurst(0.02, 0.18, v * 0.1);
+    const hits = [0, 0.38, 0.76];
+    hits.forEach((at, i) => {
+      const punch = v * (0.72 - i * 0.06);
+      // низкий «тарелочный» удар
+      tone(110, at, 0.55, "sine", punch, 70);
+      tone(165, at + 0.01, 0.45, "triangle", punch * 0.85, 95);
+      tone(220, at + 0.02, 0.28, "square", punch * 0.35);
+      tone(330, at + 0.03, 0.22, "sawtooth", punch * 0.18);
+      noiseBurst(at, 0.22, punch * 0.28);
+    });
+    // финальный длинный хвост
+    tone(98, 1.05, 1.1, "sine", v * 0.55, 55);
+    tone(147, 1.08, 0.95, "triangle", v * 0.4, 80);
   }
 
   function playLevelChange(volume, isBreak) {
