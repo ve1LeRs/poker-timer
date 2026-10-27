@@ -1,0 +1,731 @@
+(function () {
+  "use strict";
+
+  const STORAGE_KEY = "poker-timer-v1";
+  const CUSTOM_KEY = "poker-timer-customs-v1";
+
+  const $ = (id) => document.getElementById(id);
+
+  const els = {
+    board: $("board"),
+    tournamentName: $("tournamentName"),
+    levelLabel: $("levelLabel"),
+    statusPill: $("statusPill"),
+    clock: $("clock"),
+    progressFill: $("progressFill"),
+    blindsLabel: $("blindsLabel"),
+    blindsValue: $("blindsValue"),
+    anteValue: $("anteValue"),
+    nextValue: $("nextValue"),
+    playersValue: $("playersValue"),
+    avgStackValue: $("avgStackValue"),
+    elapsedValue: $("elapsedValue"),
+    remainingValue: $("remainingValue"),
+    btnPlay: $("btnPlay"),
+    btnPrev: $("btnPrev"),
+    btnNext: $("btnNext"),
+    btnSkip: $("btnSkip"),
+    btnPlayerMinus: $("btnPlayerMinus"),
+    btnPlayerPlus: $("btnPlayerPlus"),
+    btnSettings: $("btnSettings"),
+    btnTheme: $("btnTheme"),
+    btnFullscreen: $("btnFullscreen"),
+    dialog: $("settingsDialog"),
+    structureBody: document.querySelector("#structureTable tbody"),
+    setPreset: $("setPreset"),
+    setCustomList: $("setCustomList"),
+    importFile: $("importFile")
+  };
+
+  function cloneLevels(levels) {
+    return levels.map((l) => ({ ...l }));
+  }
+
+  function defaultState() {
+    const preset = window.POKER_PRESETS.regular;
+    return {
+      name: "Домашний турнир",
+      levels: cloneLevels(preset.levels),
+      levelIndex: 0,
+      remainingMs: preset.levels[0].duration * 60 * 1000,
+      running: false,
+      endedAt: null,
+      playersTotal: 9,
+      playersLeft: 9,
+      startStack: preset.startStack,
+      soundEnabled: true,
+      volume: 70,
+      warningSeconds: 30,
+      warningSound: true,
+      theme: "dark",
+      accent: "gold",
+      clockFormat: "mm:ss",
+      wakeLock: true,
+      elapsedMs: 0,
+      warningPlayedForLevel: -1,
+      presetId: "regular"
+    };
+  }
+
+  let state = loadState();
+  let raf = null;
+  let lastTick = null;
+  let wakeLockSentinel = null;
+  let draftLevels = null;
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      const parsed = JSON.parse(raw);
+      const base = defaultState();
+      const merged = { ...base, ...parsed };
+      if (!Array.isArray(merged.levels) || !merged.levels.length) {
+        merged.levels = cloneLevels(window.POKER_PRESETS.regular.levels);
+      }
+      merged.levels = merged.levels.map(normalizeLevel);
+      return merged;
+    } catch {
+      return defaultState();
+    }
+  }
+
+  function saveState() {
+    const toSave = { ...state, running: false, endedAt: null };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  }
+
+  function normalizeLevel(l) {
+    return {
+      duration: Math.max(1, Number(l.duration) || 1),
+      sb: Math.max(0, Number(l.sb) || 0),
+      bb: Math.max(0, Number(l.bb) || 0),
+      ante: Math.max(0, Number(l.ante) || 0),
+      isBreak: Boolean(l.isBreak)
+    };
+  }
+
+  function formatNumber(n) {
+    return new Intl.NumberFormat("ru-RU").format(Math.round(n));
+  }
+
+  function pad(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function formatClock(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    if (state.clockFormat === "h:mm:ss" || h > 0) {
+      return `${h}:${pad(m)}:${pad(s)}`;
+    }
+    if (state.clockFormat === "m:ss") {
+      return `${m + h * 60}:${pad(s)}`;
+    }
+    return `${pad(m + h * 60)}:${pad(s)}`;
+  }
+
+  function currentLevel() {
+    return state.levels[state.levelIndex] || null;
+  }
+
+  function nextLevel() {
+    return state.levels[state.levelIndex + 1] || null;
+  }
+
+  function levelDurationMs(level) {
+    return (level?.duration || 0) * 60 * 1000;
+  }
+
+  function remainingTournamentMs() {
+    let sum = Math.max(0, state.remainingMs);
+    for (let i = state.levelIndex + 1; i < state.levels.length; i++) {
+      sum += levelDurationMs(state.levels[i]);
+    }
+    return sum;
+  }
+
+  function playLevelIndex() {
+    let n = 0;
+    for (let i = 0; i <= state.levelIndex; i++) {
+      if (!state.levels[i].isBreak) n++;
+    }
+    return n;
+  }
+
+  function syncRemainingFromClock() {
+    if (!state.running || !state.endedAt) return;
+    state.remainingMs = Math.max(0, state.endedAt - Date.now());
+  }
+
+  function applyTheme() {
+    document.body.dataset.theme = state.theme;
+    document.body.dataset.accent = state.accent;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute(
+      "content",
+      state.theme === "light" ? "#e9efe6" : "#0b1410"
+    );
+  }
+
+  function render() {
+    syncRemainingFromClock();
+    const level = currentLevel();
+    const next = nextLevel();
+    const isBreak = Boolean(level?.isBreak);
+
+    document.body.classList.toggle("is-break", isBreak);
+    els.tournamentName.textContent = state.name || "Poker Timer";
+
+    if (!level) {
+      els.levelLabel.textContent = "Конец";
+      els.blindsLabel.textContent = "Турнир";
+      els.blindsValue.textContent = "завершён";
+      els.anteValue.textContent = "—";
+      els.nextValue.textContent = "—";
+      els.clock.textContent = "00:00";
+      els.progressFill.style.transform = "scaleX(0)";
+    } else if (isBreak) {
+      els.levelLabel.textContent = "Перерыв";
+      els.blindsLabel.textContent = "Статус";
+      els.blindsValue.textContent = "BREAK";
+      els.anteValue.textContent = "—";
+    } else {
+      els.levelLabel.textContent = `Уровень ${playLevelIndex()}`;
+      els.blindsLabel.textContent = "Блайнды";
+      els.blindsValue.textContent = `${formatNumber(level.sb)} / ${formatNumber(level.bb)}`;
+      els.anteValue.textContent = level.ante > 0 ? formatNumber(level.ante) : "—";
+    }
+
+    if (next) {
+      if (next.isBreak) {
+        els.nextValue.textContent = `Перерыв · ${next.duration} мин`;
+      } else {
+        const ante = next.ante > 0 ? ` · анте ${formatNumber(next.ante)}` : "";
+        els.nextValue.textContent = `${formatNumber(next.sb)} / ${formatNumber(next.bb)}${ante} · ${next.duration} мин`;
+      }
+    } else {
+      els.nextValue.textContent = "Последний уровень";
+    }
+
+    els.clock.textContent = formatClock(state.remainingMs);
+    els.clock.classList.toggle("warn", state.remainingMs <= state.warningSeconds * 1000 && state.remainingMs > 10000);
+    els.clock.classList.toggle("critical", state.remainingMs <= 10000);
+
+    const total = level ? levelDurationMs(level) : 1;
+    const ratio = Math.max(0, Math.min(1, state.remainingMs / total));
+    els.progressFill.style.transform = `scaleX(${ratio})`;
+
+    els.playersValue.textContent = `${state.playersLeft} / ${state.playersTotal}`;
+    const avg = state.playersLeft > 0 ? (state.startStack * state.playersTotal) / state.playersLeft : 0;
+    els.avgStackValue.textContent = formatNumber(avg);
+    els.elapsedValue.textContent = formatClock(state.elapsedMs);
+    els.remainingValue.textContent = formatClock(remainingTournamentMs());
+
+    els.statusPill.className = "status-pill";
+    if (!level) {
+      els.statusPill.textContent = "Финиш";
+    } else if (isBreak) {
+      els.statusPill.textContent = state.running ? "Перерыв" : "Перерыв · пауза";
+      els.statusPill.classList.add("break");
+    } else if (state.running) {
+      els.statusPill.textContent = "Идёт";
+      els.statusPill.classList.add("running");
+    } else if (state.elapsedMs > 0 || state.levelIndex > 0 || state.remainingMs < total) {
+      els.statusPill.textContent = "Пауза";
+      els.statusPill.classList.add("paused");
+    } else {
+      els.statusPill.textContent = "Готов";
+    }
+
+    els.btnPlay.textContent = state.running ? "⏸" : "▶";
+    els.btnPlay.title = state.running ? "Пауза" : "Старт";
+  }
+
+  function goToLevel(index, { auto = false } = {}) {
+    if (index < 0 || index >= state.levels.length) {
+      if (index >= state.levels.length) {
+        pause();
+        state.remainingMs = 0;
+        render();
+        saveState();
+      }
+      return;
+    }
+    const prev = currentLevel();
+    state.levelIndex = index;
+    state.remainingMs = levelDurationMs(state.levels[index]);
+    state.warningPlayedForLevel = -1;
+    if (state.running) {
+      state.endedAt = Date.now() + state.remainingMs;
+    }
+    if (auto && state.soundEnabled) {
+      window.PokerAudio.playLevelChange(state.volume / 100, Boolean(state.levels[index].isBreak));
+    } else if (!auto && prev) {
+      // manual navigation: no sound required
+    }
+    render();
+    saveState();
+  }
+
+  function advanceLevel() {
+    if (state.levelIndex >= state.levels.length - 1) {
+      pause();
+      state.remainingMs = 0;
+      render();
+      saveState();
+      return;
+    }
+    goToLevel(state.levelIndex + 1, { auto: true });
+  }
+
+  function tick(now) {
+    if (!state.running) return;
+    if (lastTick == null) lastTick = now;
+    const delta = now - lastTick;
+    lastTick = now;
+
+    state.elapsedMs += delta;
+    state.remainingMs = Math.max(0, (state.endedAt || Date.now()) - Date.now());
+
+    if (
+      state.warningSound &&
+      state.soundEnabled &&
+      state.warningSeconds > 0 &&
+      state.warningPlayedForLevel !== state.levelIndex &&
+      state.remainingMs <= state.warningSeconds * 1000 &&
+      state.remainingMs > 0
+    ) {
+      state.warningPlayedForLevel = state.levelIndex;
+      window.PokerAudio.playWarning(state.volume / 100);
+    }
+
+    if (state.remainingMs <= 0) {
+      advanceLevel();
+    } else {
+      render();
+    }
+
+    raf = requestAnimationFrame(tick);
+  }
+
+  async function requestWakeLock() {
+    if (!state.wakeLock || !("wakeLock" in navigator)) return;
+    try {
+      wakeLockSentinel = await navigator.wakeLock.request("screen");
+      wakeLockSentinel.addEventListener("release", () => {
+        wakeLockSentinel = null;
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function releaseWakeLock() {
+    wakeLockSentinel?.release?.();
+    wakeLockSentinel = null;
+  }
+
+  function play() {
+    const level = currentLevel();
+    if (!level) return;
+    window.PokerAudio.unlock();
+    state.running = true;
+    state.endedAt = Date.now() + state.remainingMs;
+    lastTick = null;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(tick);
+    requestWakeLock();
+    render();
+    saveState();
+  }
+
+  function pause() {
+    syncRemainingFromClock();
+    state.running = false;
+    state.endedAt = null;
+    cancelAnimationFrame(raf);
+    raf = null;
+    lastTick = null;
+    releaseWakeLock();
+    render();
+    saveState();
+  }
+
+  function togglePlay() {
+    if (state.running) pause();
+    else play();
+  }
+
+  function fillPresetSelect() {
+    els.setPreset.innerHTML = "";
+    Object.values(window.POKER_PRESETS).forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      if (p.id === state.presetId) opt.selected = true;
+      els.setPreset.appendChild(opt);
+    });
+  }
+
+  function loadCustoms() {
+    try {
+      return JSON.parse(localStorage.getItem(CUSTOM_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  function saveCustoms(map) {
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify(map));
+  }
+
+  function refreshCustomList() {
+    const map = loadCustoms();
+    els.setCustomList.innerHTML = "";
+    const names = Object.keys(map).sort((a, b) => a.localeCompare(b, "ru"));
+    if (!names.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "Нет сохранённых";
+      els.setCustomList.appendChild(opt);
+      return;
+    }
+    names.forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      els.setCustomList.appendChild(opt);
+    });
+  }
+
+  function renderStructureTable(levels) {
+    els.structureBody.innerHTML = "";
+    levels.forEach((level, index) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td><input type="number" min="1" data-k="duration" data-i="${index}" value="${level.duration}" /></td>
+        <td><input type="number" min="0" data-k="sb" data-i="${index}" value="${level.sb}" ${level.isBreak ? "disabled" : ""} /></td>
+        <td><input type="number" min="0" data-k="bb" data-i="${index}" value="${level.bb}" ${level.isBreak ? "disabled" : ""} /></td>
+        <td><input type="number" min="0" data-k="ante" data-i="${index}" value="${level.ante}" ${level.isBreak ? "disabled" : ""} /></td>
+        <td>
+          <select data-k="isBreak" data-i="${index}">
+            <option value="0" ${!level.isBreak ? "selected" : ""}>Игра</option>
+            <option value="1" ${level.isBreak ? "selected" : ""}>Перерыв</option>
+          </select>
+        </td>
+        <td>
+          <div class="row-actions">
+            <button type="button" data-act="up" data-i="${index}" title="Вверх">↑</button>
+            <button type="button" data-act="down" data-i="${index}" title="Вниз">↓</button>
+            <button type="button" data-act="del" data-i="${index}" title="Удалить">×</button>
+          </div>
+        </td>`;
+      els.structureBody.appendChild(tr);
+    });
+  }
+
+  function readStructureFromTable() {
+    if (!draftLevels) return cloneLevels(state.levels);
+    return draftLevels.map(normalizeLevel);
+  }
+
+  function openSettings() {
+    draftLevels = cloneLevels(state.levels);
+    $("setName").value = state.name;
+    $("setPlayersTotal").value = state.playersTotal;
+    $("setPlayersLeft").value = state.playersLeft;
+    $("setStartStack").value = state.startStack;
+    $("setSoundEnabled").checked = state.soundEnabled;
+    $("setVolume").value = state.volume;
+    $("setWarningSeconds").value = state.warningSeconds;
+    $("setWarningSound").checked = state.warningSound;
+    $("setTheme").value = state.theme;
+    $("setAccent").value = state.accent;
+    $("setClockFormat").value = state.clockFormat;
+    $("setWakeLock").checked = state.wakeLock;
+    $("setCustomName").value = "";
+    fillPresetSelect();
+    refreshCustomList();
+    renderStructureTable(draftLevels);
+    els.dialog.showModal();
+  }
+
+  function applySettingsFromForm({ reloadPreset = false } = {}) {
+    if (reloadPreset) {
+      const preset = window.POKER_PRESETS[$("setPreset").value];
+      if (preset) {
+        draftLevels = cloneLevels(preset.levels);
+        $("setStartStack").value = preset.startStack;
+        state.presetId = preset.id;
+        renderStructureTable(draftLevels);
+      }
+      return;
+    }
+
+    const wasRunning = state.running;
+    if (wasRunning) pause();
+
+    state.name = $("setName").value.trim() || "Poker Timer";
+    state.playersTotal = Math.max(1, Number($("setPlayersTotal").value) || 1);
+    state.playersLeft = Math.min(state.playersTotal, Math.max(1, Number($("setPlayersLeft").value) || 1));
+    state.startStack = Math.max(100, Number($("setStartStack").value) || 10000);
+    state.soundEnabled = $("setSoundEnabled").checked;
+    state.volume = Math.max(0, Math.min(100, Number($("setVolume").value) || 0));
+    state.warningSeconds = Math.max(0, Number($("setWarningSeconds").value) || 0);
+    state.warningSound = $("setWarningSound").checked;
+    state.theme = $("setTheme").value;
+    state.accent = $("setAccent").value;
+    state.clockFormat = $("setClockFormat").value;
+    state.wakeLock = $("setWakeLock").checked;
+
+    const newLevels = readStructureFromTable();
+    const structureChanged = JSON.stringify(newLevels) !== JSON.stringify(state.levels);
+    state.levels = newLevels;
+    if (structureChanged) {
+      state.levelIndex = Math.min(state.levelIndex, state.levels.length - 1);
+      state.remainingMs = levelDurationMs(state.levels[state.levelIndex]);
+      state.elapsedMs = 0;
+      state.warningPlayedForLevel = -1;
+    }
+
+    applyTheme();
+    render();
+    saveState();
+    els.dialog.close();
+  }
+
+  function exportJson() {
+    const payload = {
+      name: state.name,
+      startStack: state.startStack,
+      playersTotal: state.playersTotal,
+      levels: state.levels,
+      theme: state.theme,
+      accent: state.accent,
+      clockFormat: state.clockFormat,
+      soundEnabled: state.soundEnabled,
+      volume: state.volume,
+      warningSeconds: state.warningSeconds,
+      warningSound: state.warningSound
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "poker-timer-structure.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function importJson(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!Array.isArray(data.levels) || !data.levels.length) throw new Error("no levels");
+        draftLevels = data.levels.map(normalizeLevel);
+        if (data.name) $("setName").value = data.name;
+        if (data.startStack) $("setStartStack").value = data.startStack;
+        if (data.playersTotal) $("setPlayersTotal").value = data.playersTotal;
+        if (data.theme) $("setTheme").value = data.theme;
+        if (data.accent) $("setAccent").value = data.accent;
+        if (data.clockFormat) $("setClockFormat").value = data.clockFormat;
+        if (typeof data.soundEnabled === "boolean") $("setSoundEnabled").checked = data.soundEnabled;
+        if (typeof data.volume === "number") $("setVolume").value = data.volume;
+        if (typeof data.warningSeconds === "number") $("setWarningSeconds").value = data.warningSeconds;
+        if (typeof data.warningSound === "boolean") $("setWarningSound").checked = data.warningSound;
+        renderStructureTable(draftLevels);
+        alert("Структура загружена. Нажмите «Применить».");
+      } catch {
+        alert("Не удалось прочитать JSON.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // Events
+  els.btnPlay.addEventListener("click", togglePlay);
+  els.btnPrev.addEventListener("click", () => goToLevel(state.levelIndex - 1));
+  els.btnNext.addEventListener("click", () => goToLevel(state.levelIndex + 1));
+  els.btnSkip.addEventListener("click", () => goToLevel(state.levelIndex + 1));
+  els.btnPlayerMinus.addEventListener("click", () => {
+    state.playersLeft = Math.max(1, state.playersLeft - 1);
+    render();
+    saveState();
+  });
+  els.btnPlayerPlus.addEventListener("click", () => {
+    state.playersLeft = Math.min(state.playersTotal, state.playersLeft + 1);
+    if (state.playersLeft === state.playersTotal) {
+      /* ok */
+    } else if (state.playersLeft < state.playersTotal) {
+      /* ok */
+    }
+    render();
+    saveState();
+  });
+
+  els.btnSettings.addEventListener("click", openSettings);
+  els.btnTheme.addEventListener("click", () => {
+    state.theme = state.theme === "dark" ? "light" : "dark";
+    applyTheme();
+    saveState();
+  });
+  els.btnFullscreen.addEventListener("click", async () => {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch {
+      /* ignore */
+    }
+  });
+
+  document.querySelectorAll(".settings-tabs .tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".settings-tabs .tab").forEach((t) => t.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+      tab.classList.add("active");
+      document.querySelector(`[data-panel="${tab.dataset.tab}"]`)?.classList.add("active");
+    });
+  });
+
+  $("btnApplySettings").addEventListener("click", () => applySettingsFromForm());
+  $("setPreset").addEventListener("change", () => applySettingsFromForm({ reloadPreset: true }));
+  $("btnAddLevel").addEventListener("click", () => {
+    draftLevels = readStructureFromTable();
+    const last = draftLevels[draftLevels.length - 1];
+    draftLevels.push({
+      duration: last?.duration || 15,
+      sb: last && !last.isBreak ? last.sb * 2 || 25 : 25,
+      bb: last && !last.isBreak ? last.bb * 2 || 50 : 50,
+      ante: last && !last.isBreak ? last.ante : 0,
+      isBreak: false
+    });
+    renderStructureTable(draftLevels);
+  });
+  $("btnAddBreak").addEventListener("click", () => {
+    draftLevels = readStructureFromTable();
+    draftLevels.push({ duration: 10, sb: 0, bb: 0, ante: 0, isBreak: true });
+    renderStructureTable(draftLevels);
+  });
+
+  els.structureBody.addEventListener("change", (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLElement)) return;
+    const i = Number(t.dataset.i);
+    const k = t.dataset.k;
+    if (Number.isNaN(i) || !k) return;
+    draftLevels = readStructureFromTable();
+    if (k === "isBreak") {
+      draftLevels[i].isBreak = t.value === "1";
+      if (draftLevels[i].isBreak) {
+        draftLevels[i].sb = 0;
+        draftLevels[i].bb = 0;
+        draftLevels[i].ante = 0;
+      }
+    } else {
+      draftLevels[i][k] = Number(t.value) || 0;
+    }
+    renderStructureTable(draftLevels);
+  });
+
+  els.structureBody.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    const i = Number(btn.dataset.i);
+    const act = btn.dataset.act;
+    draftLevels = readStructureFromTable();
+    if (act === "del") {
+      if (draftLevels.length <= 1) return;
+      draftLevels.splice(i, 1);
+    } else if (act === "up" && i > 0) {
+      [draftLevels[i - 1], draftLevels[i]] = [draftLevels[i], draftLevels[i - 1]];
+    } else if (act === "down" && i < draftLevels.length - 1) {
+      [draftLevels[i + 1], draftLevels[i]] = [draftLevels[i], draftLevels[i + 1]];
+    }
+    renderStructureTable(draftLevels);
+  });
+
+  $("btnTestSound").addEventListener("click", () => {
+    window.PokerAudio.unlock();
+    window.PokerAudio.playLevelChange(Number($("setVolume").value) / 100, false);
+  });
+
+  $("btnSaveCustom").addEventListener("click", () => {
+    const name = $("setCustomName").value.trim();
+    if (!name) {
+      alert("Введите имя структуры");
+      return;
+    }
+    const map = loadCustoms();
+    map[name] = {
+      name,
+      startStack: Number($("setStartStack").value) || 10000,
+      levels: readStructureFromTable()
+    };
+    saveCustoms(map);
+    refreshCustomList();
+    els.setCustomList.value = name;
+    alert("Сохранено");
+  });
+
+  $("btnLoadCustom").addEventListener("click", () => {
+    const name = els.setCustomList.value;
+    const map = loadCustoms();
+    if (!name || !map[name]) return;
+    draftLevels = cloneLevels(map[name].levels);
+    $("setStartStack").value = map[name].startStack || 10000;
+    renderStructureTable(draftLevels);
+  });
+
+  $("btnDeleteCustom").addEventListener("click", () => {
+    const name = els.setCustomList.value;
+    if (!name) return;
+    const map = loadCustoms();
+    delete map[name];
+    saveCustoms(map);
+    refreshCustomList();
+  });
+
+  $("btnExport").addEventListener("click", exportJson);
+  $("btnImport").addEventListener("click", () => els.importFile.click());
+  els.importFile.addEventListener("change", () => {
+    const file = els.importFile.files?.[0];
+    if (file) importJson(file);
+    els.importFile.value = "";
+  });
+
+  $("btnResetAll").addEventListener("click", () => {
+    if (!confirm("Сбросить таймер и настройки?")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state = defaultState();
+    draftLevels = cloneLevels(state.levels);
+    applyTheme();
+    openSettings();
+    render();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (els.dialog.open) return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      togglePlay();
+    } else if (e.code === "ArrowRight") {
+      goToLevel(state.levelIndex + 1);
+    } else if (e.code === "ArrowLeft") {
+      goToLevel(state.levelIndex - 1);
+    }
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && state.running && state.wakeLock) {
+      requestWakeLock();
+    }
+  });
+
+  // Init
+  applyTheme();
+  render();
+  window.addEventListener("beforeunload", saveState);
+})();

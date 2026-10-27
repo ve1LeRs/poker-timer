@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1410" />
+  <meta name="description" content="Настраиваемый блайнд-таймер для покерного турнира — уровни, перерывы, звук, пресеты." />
+  <title>Poker Timer — блайнд-таймер турнира</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b1410'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='34' fill='%23c9a227'%3E♠%3C/text%3E%3C/svg%3E" />
+</head>
+<body data-theme="dark" data-accent="gold">
+  <div class="bg-layer" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">♠</span>
+      <span class="brand-name" id="tournamentName">Poker Timer</span>
+    </div>
+    <div class="topbar-actions">
+      <button type="button" class="icon-btn" id="btnTheme" title="Тема" aria-label="Переключить тему">◐</button>
+      <button type="button" class="icon-btn" id="btnFullscreen" title="Полный экран" aria-label="Полный экран">⛶</button>
+      <button type="button" class="btn btn-ghost" id="btnSettings" aria-haspopup="dialog">Настройки</button>
+    </div>
+  </header>
+
+  <main class="board" id="board">
+    <section class="level-meta">
+      <p class="eyebrow" id="levelLabel">Уровень 1</p>
+      <p class="status-pill" id="statusPill">Готов</p>
+    </section>
+
+    <section class="clock-block" aria-live="polite">
+      <div class="clock" id="clock">15:00</div>
+      <div class="progress" aria-hidden="true">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </section>
+
+    <section class="blinds-block">
+      <div class="blind-main">
+        <span class="blind-label" id="blindsLabel">Блайнды</span>
+        <span class="blind-value" id="blindsValue">25 / 50</span>
+      </div>
+      <div class="blind-ante" id="anteWrap">
+        <span class="blind-label">Анте</span>
+        <span class="blind-value ante" id="anteValue">—</span>
+      </div>
+    </section>
+
+    <section class="next-block">
+      <span class="next-label">Далее</span>
+      <span class="next-value" id="nextValue">50 / 100 · 15:00</span>
+    </section>
+
+    <section class="stats-row">
+      <div class="stat">
+        <span class="stat-label">Игроки</span>
+        <span class="stat-value" id="playersValue">9 / 9</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Средний стек</span>
+        <span class="stat-value" id="avgStackValue">10 000</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Прошло</span>
+        <span class="stat-value" id="elapsedValue">00:00</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Осталось</span>
+        <span class="stat-value" id="remainingValue">—</span>
+      </div>
+    </section>
+
+    <section class="controls">
+      <button type="button" class="ctrl" id="btnPrev" title="Предыдущий уровень">⏮</button>
+      <button type="button" class="ctrl ctrl-primary" id="btnPlay" title="Старт / Пауза">▶</button>
+      <button type="button" class="ctrl" id="btnNext" title="Следующий уровень">⏭</button>
+      <button type="button" class="ctrl" id="btnSkip" title="Пропустить уровень">⏩</button>
+      <div class="player-edit">
+        <button type="button" class="ctrl small" id="btnPlayerMinus" title="Игрок выбыл">−</button>
+        <span class="player-edit-label">игроки</span>
+        <button type="button" class="ctrl small" id="btnPlayerPlus" title="Добавить игрока">+</button>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="settings" id="settingsDialog" aria-labelledby="settingsTitle">
+    <form method="dialog" class="settings-panel" id="settingsForm">
+      <header class="settings-head">
+        <h2 id="settingsTitle">Настройки</h2>
+        <button type="submit" class="icon-btn" value="close" aria-label="Закрыть">✕</button>
+      </header>
+
+      <nav class="settings-tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="tournament" role="tab">Турнир</button>
+        <button type="button" class="tab" data-tab="structure" role="tab">Структура</button>
+        <button type="button" class="tab" data-tab="sound" role="tab">Звук</button>
+        <button type="button" class="tab" data-tab="display" role="tab">Экран</button>
+        <button type="button" class="tab" data-tab="data" role="tab">Данные</button>
+      </nav>
+
+      <div class="tab-panels">
+        <section class="tab-panel active" data-panel="tournament">
+          <label class="field">
+            <span>Название на табло</span>
+            <input type="text" id="setName" maxlength="48" />
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span>Игроков всего</span>
+              <input type="number" id="setPlayersTotal" min="1" max="999" />
+            </label>
+            <label class="field">
+              <span>В игре</span>
+              <input type="number" id="setPlayersLeft" min="1" max="999" />
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span>Стартовый стек</span>
+              <input type="number" id="setStartStack" min="100" step="100" />
+            </label>
+            <label class="field">
+              <span>Пресет структуры</span>
+              <select id="setPreset"></select>
+            </label>
+          </div>
+          <p class="hint">Пресет заменяет текущую структуру. Свои структуры сохраняются в браузере.</p>
+        </section>
+
+        <section class="tab-panel" data-panel="structure">
+          <div class="structure-toolbar">
+            <button type="button" class="btn btn-ghost" id="btnAddLevel">+ Уровень</button>
+            <button type="button" class="btn btn-ghost" id="btnAddBreak">+ Перерыв</button>
+          </div>
+          <div class="structure-table-wrap">
+            <table class="structure-table" id="structureTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Мин</th>
+                  <th>МБ</th>
+                  <th>ББ</th>
+                  <th>Анте</th>
+                  <th>Тип</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="sound">
+          <label class="field switch">
+            <span>Звук смены уровня</span>
+            <input type="checkbox" id="setSoundEnabled" />
+          </label>
+          <label class="field">
+            <span>Громкость</span>
+            <input type="range" id="setVolume" min="0" max="100" />
+          </label>
+          <label class="field">
+            <span>Предупреждение за (сек)</span>
+            <input type="number" id="setWarningSeconds" min="0" max="120" />
+          </label>
+          <label class="field switch">
+            <span>Звук предупреждения</span>
+            <input type="checkbox" id="setWarningSound" />
+          </label>
+          <button type="button" class="btn btn-ghost" id="btnTestSound">Проверить звук</button>
+        </section>
+
+        <section class="tab-panel" data-panel="display">
+          <label class="field">
+            <span>Тема</span>
+            <select id="setTheme">
+              <option value="dark">Тёмная (зал)</option>
+              <option value="light">Светлая</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Акцент</span>
+            <select id="setAccent">
+              <option value="gold">Золото</option>
+              <option value="felt">Сукно</option>
+              <option value="crimson">Бордо</option>
+              <option value="sky">Лёд</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Формат часов</span>
+            <select id="setClockFormat">
+              <option value="m:ss">M:SS</option>
+              <option value="mm:ss">MM:SS</option>
+              <option value="h:mm:ss">H:MM:SS</option>
+            </select>
+          </label>
+          <label class="field switch">
+            <span>Не гасить экран (Wake Lock)</span>
+            <input type="checkbox" id="setWakeLock" />
+          </label>
+        </section>
+
+        <section class="tab-panel" data-panel="data">
+          <label class="field">
+            <span>Сохранить структуру как</span>
+            <div class="inline-actions">
+              <input type="text" id="setCustomName" placeholder="Моя структура" maxlength="40" />
+              <button type="button" class="btn btn-ghost" id="btnSaveCustom">Сохранить</button>
+            </div>
+          </label>
+          <label class="field">
+            <span>Загрузить свою</span>
+            <div class="inline-actions">
+              <select id="setCustomList"></select>
+              <button type="button" class="btn btn-ghost" id="btnLoadCustom">Загрузить</button>
+              <button type="button" class="btn btn-ghost danger" id="btnDeleteCustom">Удалить</button>
+            </div>
+          </label>
+          <div class="inline-actions wrap">
+            <button type="button" class="btn btn-ghost" id="btnExport">Экспорт JSON</button>
+            <button type="button" class="btn btn-ghost" id="btnImport">Импорт JSON</button>
+            <input type="file" id="importFile" accept="application/json,.json" hidden />
+            <button type="button" class="btn btn-ghost danger" id="btnResetAll">Сбросить всё</button>
+          </div>
+          <p class="hint">Данные хранятся только в localStorage этого браузера. Никуда не отправляются.</p>
+        </section>
+      </div>
+
+      <footer class="settings-foot">
+        <button type="button" class="btn btn-primary" id="btnApplySettings">Применить</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script src="js/presets.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

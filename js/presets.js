@@ -1,0 +1,101 @@
+window.POKER_PRESETS = {
+  turbo: {
+    id: "turbo",
+    name: "Турбо",
+    startStack: 10000,
+    levels: [
+      { duration: 5, sb: 25, bb: 50, ante: 0, isBreak: false },
+      { duration: 5, sb: 50, bb: 100, ante: 0, isBreak: false },
+      { duration: 5, sb: 75, bb: 150, ante: 0, isBreak: false },
+      { duration: 5, sb: 100, bb: 200, ante: 25, isBreak: false },
+      { duration: 5, sb: 0, bb: 0, ante: 0, isBreak: true },
+      { duration: 5, sb: 150, bb: 300, ante: 25, isBreak: false },
+      { duration: 5, sb: 200, bb: 400, ante: 50, isBreak: false },
+      { duration: 5, sb: 300, bb: 600, ante: 75, isBreak: false },
+      { duration: 5, sb: 400, bb: 800, ante: 100, isBreak: false },
+      { duration: 5, sb: 500, bb: 1000, ante: 100, isBreak: false },
+      { duration: 5, sb: 700, bb: 1400, ante: 200, isBreak: false },
+      { duration: 5, sb: 1000, bb: 2000, ante: 300, isBreak: false },
+      { duration: 5, sb: 1500, bb: 3000, ante: 400, isBreak: false },
+      { duration: 5, sb: 2000, bb: 4000, ante: 500, isBreak: false },
+      { duration: 5, sb: 3000, bb: 6000, ante: 1000, isBreak: false },
+      { duration: 5, sb: 5000, bb: 10000, ante: 1500, isBreak: false }
+    ]
+  },
+  regular: {
+    id: "regular",
+    name: "Обычная",
+    startStack: 10000,
+    levels: [
+      { duration: 15, sb: 25, bb: 50, ante: 0, isBreak: false },
+      { duration: 15, sb: 50, bb: 100, ante: 0, isBreak: false },
+      { duration: 15, sb: 75, bb: 150, ante: 0, isBreak: false },
+      { duration: 15, sb: 100, bb: 200, ante: 25, isBreak: false },
+      { duration: 10, sb: 0, bb: 0, ante: 0, isBreak: true },
+      { duration: 15, sb: 150, bb: 300, ante: 25, isBreak: false },
+      { duration: 15, sb: 200, bb: 400, ante: 50, isBreak: false },
+      { duration: 15, sb: 300, bb: 600, ante: 75, isBreak: false },
+      { duration: 15, sb: 400, bb: 800, ante: 100, isBreak: false },
+      { duration: 10, sb: 0, bb: 0, ante: 0, isBreak: true },
+      { duration: 15, sb: 500, bb: 1000, ante: 100, isBreak: false },
+      { duration: 15, sb: 700, bb: 1400, ante: 200, isBreak: false },
+      { duration: 15, sb: 1000, bb: 2000, ante: 300, isBreak: false },
+      { duration: 15, sb: 1500, bb: 3000, ante: 400, isBreak: false },
+      { duration: 15, sb: 2000, bb: 4000, ante: 500, isBreak: false },
+      { duration: 15, sb: 3000, bb: 6000, ante: 800, isBreak: false },
+      { duration: 15, sb: 4000, bb: 8000, ante: 1000, isBreak: false },
+      { duration: 15, sb: 5000, bb: 10000, ante: 1500, isBreak: false }
+    ]
+  },
+  deep: {
+    id: "deep",
+    name: "Глубокая",
+    startStack: 20000,
+    levels: [
+      { duration: 20, sb: 25, bb: 50, ante: 0, isBreak: false },
+      { duration: 20, sb: 50, bb: 100, ante: 0, isBreak: false },
+      { duration: 20, sb: 75, bb: 150, ante: 0, isBreak: false },
+      { duration: 20, sb: 100, bb: 200, ante: 25, isBreak: false },
+      { duration: 15, sb: 0, bb: 0, ante: 0, isBreak: true },
+      { duration: 20, sb: 125, bb: 250, ante: 25, isBreak: false },
+      { duration: 20, sb: 150, bb: 300, ante: 50, isBreak: false },
+      { duration: 20, sb: 200, bb: 400, ante: 50, isBreak: false },
+      { duration: 20, sb: 300, bb: 600, ante: 75, isBreak: false },
+      { duration: 15, sb: 0, bb: 0, ante: 0, isBreak: true },
+      { duration: 20, sb: 400, bb: 800, ante: 100, isBreak: false },
+      { duration: 20, sb: 500, bb: 1000, ante: 100, isBreak: false },
+      { duration: 20, sb: 700, bb: 1400, ante: 200, isBreak: false },
+      { duration: 20, sb: 1000, bb: 2000, ante: 300, isBreak: false },
+      { duration: 20, sb: 1500, bb: 3000, ante: 400, isBreak: false },
+      { duration: 15, sb: 0, bb: 0, ante: 0, isBreak: true },
+      { duration: 20, sb: 2000, bb: 4000, ante: 500, isBreak: false },
+      { duration: 20, sb: 3000, bb: 6000, ante: 800, isBreak: false },
+      { duration: 20, sb: 4000, bb: 8000, ante: 1000, isBreak: false },
+      { duration: 20, sb: 5000, bb: 10000, ante: 1500, isBreak: false },
+      { duration: 20, sb: 8000, bb: 16000, ante: 2000, isBreak: false },
+      { duration: 20, sb: 10000, bb: 20000, ante: 3000, isBreak: false }
+    ]
+  },
+  home: {
+    id: "home",
+    name: "Домашняя",
+    startStack: 10000,
+    levels: [
+      { duration: 12, sb: 25, bb: 50, ante: 0, isBreak: false },
+      { duration: 12, sb: 50, bb: 100, ante: 0, isBreak: false },
+      { duration: 12, sb: 100, bb: 200, ante: 0, isBreak: false },
+      { duration: 12, sb: 150, bb: 300, ante: 25, isBreak: false },
+      { duration: 8, sb: 0, bb: 0, ante: 0, isBreak: true },
+      { duration: 12, sb: 200, bb: 400, ante: 50, isBreak: false },
+      { duration: 12, sb: 300, bb: 600, ante: 75, isBreak: false },
+      { duration: 12, sb: 400, bb: 800, ante: 100, isBreak: false },
+      { duration: 12, sb: 500, bb: 1000, ante: 100, isBreak: false },
+      { duration: 12, sb: 800, bb: 1600, ante: 200, isBreak: false },
+      { duration: 12, sb: 1000, bb: 2000, ante: 300, isBreak: false },
+      { duration: 12, sb: 1500, bb: 3000, ante: 400, isBreak: false },
+      { duration: 12, sb: 2000, bb: 4000, ante: 500, isBreak: false },
+      { duration: 12, sb: 3000, bb: 6000, ante: 800, isBreak: false },
+      { duration: 12, sb: 5000, bb: 10000, ante: 1000, isBreak: false }
+    ]
+  }
+};
