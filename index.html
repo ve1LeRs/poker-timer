@@ -126,22 +126,10 @@
             <button type="button" class="btn btn-ghost" id="btnAddLevel">+ Уровень</button>
             <button type="button" class="btn btn-ghost" id="btnAddBreak">+ Перерыв</button>
           </div>
-          <div class="structure-table-wrap">
-            <table class="structure-table" id="structureTable">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Мин</th>
-                  <th>МБ</th>
-                  <th>ББ</th>
-                  <th>Анте</th>
-                  <th>Тип</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
+          <div class="structure-list" id="structureList" aria-label="Структура уровней"></div>
+          <table class="structure-table" id="structureTable" hidden>
+            <tbody></tbody>
+          </table>
         </section>
 
         <section class="tab-panel" data-panel="sound">

@@ -32,6 +32,7 @@
     btnFullscreen: $("btnFullscreen"),
     dialog: $("settingsDialog"),
     structureBody: document.querySelector("#structureTable tbody"),
+    structureList: document.getElementById("structureList"),
     setPreset: $("setPreset"),
     setCustomList: $("setCustomList"),
     importFile: $("importFile")
@@ -412,6 +413,51 @@
   }
 
   function renderStructureTable(levels) {
+    const list = document.getElementById("structureList");
+    if (list) {
+      list.innerHTML = "";
+      levels.forEach((level, index) => {
+        const row = document.createElement("article");
+        row.className = `level-card${level.isBreak ? " is-break-row" : ""}`;
+        row.innerHTML = `
+          <div class="level-card-head">
+            <strong>${level.isBreak ? "Перерыв" : `Уровень ${index + 1}`}</strong>
+            <div class="row-actions">
+              <button type="button" data-act="up" data-i="${index}" title="Вверх">↑</button>
+              <button type="button" data-act="down" data-i="${index}" title="Вниз">↓</button>
+              <button type="button" data-act="del" data-i="${index}" title="Удалить">×</button>
+            </div>
+          </div>
+          <div class="level-card-grid">
+            <label>
+              <span>Минуты</span>
+              <input type="number" min="1" data-k="duration" data-i="${index}" value="${level.duration}" />
+            </label>
+            <label>
+              <span>Тип</span>
+              <select data-k="isBreak" data-i="${index}">
+                <option value="0" ${!level.isBreak ? "selected" : ""}>Игра</option>
+                <option value="1" ${level.isBreak ? "selected" : ""}>Перерыв</option>
+              </select>
+            </label>
+            <label>
+              <span>МБ</span>
+              <input type="number" min="0" data-k="sb" data-i="${index}" value="${level.sb}" ${level.isBreak ? "disabled" : ""} />
+            </label>
+            <label>
+              <span>ББ</span>
+              <input type="number" min="0" data-k="bb" data-i="${index}" value="${level.bb}" ${level.isBreak ? "disabled" : ""} />
+            </label>
+            <label>
+              <span>Анте</span>
+              <input type="number" min="0" data-k="ante" data-i="${index}" value="${level.ante}" ${level.isBreak ? "disabled" : ""} />
+            </label>
+          </div>`;
+        list.appendChild(row);
+      });
+      return;
+    }
+
     els.structureBody.innerHTML = "";
     levels.forEach((level, index) => {
       const tr = document.createElement("tr");
@@ -439,8 +485,17 @@
   }
 
   function readStructureFromTable() {
-    if (!draftLevels) return cloneLevels(state.levels);
-    return draftLevels.map(normalizeLevel);
+    const root = document.getElementById("structureList") || els.structureBody;
+    if (!root || !draftLevels) return cloneLevels(state.levels);
+    const next = draftLevels.map((level) => ({ ...level }));
+    root.querySelectorAll("[data-k][data-i]").forEach((el) => {
+      const i = Number(el.dataset.i);
+      const k = el.dataset.k;
+      if (Number.isNaN(i) || !next[i]) return;
+      if (k === "isBreak") next[i].isBreak = el.value === "1";
+      else next[i][k] = Number(el.value) || 0;
+    });
+    return next.map(normalizeLevel);
   }
 
   function openSettings() {
@@ -621,7 +676,7 @@
     renderStructureTable(draftLevels);
   });
 
-  els.structureBody.addEventListener("change", (e) => {
+  function onStructureChange(e) {
     const t = e.target;
     if (!(t instanceof HTMLElement)) return;
     const i = Number(t.dataset.i);
@@ -639,9 +694,9 @@
       draftLevels[i][k] = Number(t.value) || 0;
     }
     renderStructureTable(draftLevels);
-  });
+  }
 
-  els.structureBody.addEventListener("click", (e) => {
+  function onStructureClick(e) {
     const btn = e.target.closest("button[data-act]");
     if (!btn) return;
     const i = Number(btn.dataset.i);
@@ -656,7 +711,12 @@
       [draftLevels[i + 1], draftLevels[i]] = [draftLevels[i], draftLevels[i + 1]];
     }
     renderStructureTable(draftLevels);
-  });
+  }
+
+  els.structureBody?.addEventListener("change", onStructureChange);
+  els.structureBody?.addEventListener("click", onStructureClick);
+  document.getElementById("structureList")?.addEventListener("change", onStructureChange);
+  document.getElementById("structureList")?.addEventListener("click", onStructureClick);
 
   $("btnTestSound").addEventListener("click", () => {
     window.PokerAudio.unlock();
