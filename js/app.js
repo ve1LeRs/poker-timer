@@ -65,7 +65,8 @@
       elapsedMs: 0,
       warningPlayedForLevel: -1,
       presetId: "home",
-      finished: false
+      finished: false,
+      started: false
     };
   }
 
@@ -91,6 +92,7 @@
       merged.elapsedMs = Math.max(0, Number(merged.elapsedMs) || 0);
       merged.running = Boolean(merged.running);
       merged.finished = Boolean(merged.finished);
+      merged.started = Boolean(merged.started) || merged.running || merged.elapsedMs > 0 || merged.levelIndex > 0;
       merged.endedAt = merged.endedAt ? Number(merged.endedAt) : null;
       merged.savedAt = merged.savedAt ? Number(merged.savedAt) : null;
       return merged;
@@ -314,17 +316,14 @@
     } else if (state.running) {
       els.statusPill.textContent = "Идёт";
       els.statusPill.classList.add("running");
-    } else if (state.elapsedMs > 0 || state.levelIndex > 0 || state.remainingMs < total) {
+    } else if (state.started && !state.finished) {
       els.statusPill.textContent = "Пауза";
       els.statusPill.classList.add("paused");
     } else {
       els.statusPill.textContent = "Готов";
     }
 
-    const paused =
-      !state.running &&
-      (state.elapsedMs > 0 || state.levelIndex > 0 || (level && state.remainingMs < levelDurationMs(level)));
-    document.body.classList.toggle("is-paused", Boolean(paused));
+    document.body.classList.toggle("is-paused", Boolean(!state.running && state.started && !state.finished));
 
     els.btnPlay.textContent = state.running ? "Пауза" : "Старт";
     els.btnPlay.title = state.running ? "Пауза" : "Старт";
@@ -432,9 +431,14 @@
   }
 
   function play() {
+    if (state.finished) return;
     const level = currentLevel();
     if (!level) return;
+    if (state.remainingMs <= 0) {
+      state.remainingMs = levelDurationMs(level);
+    }
     window.PokerAudio.unlock();
+    state.started = true;
     state.running = true;
     state.endedAt = Date.now() + state.remainingMs;
     lastTick = null;
@@ -457,7 +461,12 @@
     saveState();
   }
 
+  let lastToggleAt = 0;
   function togglePlay() {
+    const now = Date.now();
+    // страховка от двойного жеста (touch → click) на iPad/Safari
+    if (now - lastToggleAt < 450) return;
+    lastToggleAt = now;
     if (state.running) pause();
     else play();
   }
@@ -777,45 +786,35 @@
     reader.readAsText(file);
   }
 
-  function bindTap(el, handler) {
+  // только click — pointerup+click на iPad давали Старт сразу с Паузой
+  function onTap(el, handler) {
     if (!el) return;
-    let last = 0;
-    const run = (e) => {
-      const now = Date.now();
-      if (now - last < 320) return; // iPad: pointerup + click
-      last = now;
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
       handler(e);
-    };
-    el.addEventListener("click", run);
-    el.addEventListener("pointerup", (e) => {
-      if (e.pointerType === "touch" || e.pointerType === "pen") run(e);
     });
   }
 
   // Events
-  bindTap(els.btnPlay, togglePlay);
-  bindTap(els.btnPrev, () => {
+  onTap(els.btnPlay, togglePlay);
+  onTap(els.btnPrev, () => {
     if (state.finished) {
       state.finished = false;
+      state.started = true;
       goToLevel(state.levels.length - 1, { silent: true });
       return;
     }
     goToLevel(state.levelIndex - 1);
   });
-  bindTap(els.btnNext, () => goToLevel(state.levelIndex + 1));
-  bindTap(els.btnSkip, () => goToLevel(state.levelIndex + 1));
-  els.btnPlayerMinus.addEventListener("click", () => {
+  onTap(els.btnNext, () => goToLevel(state.levelIndex + 1));
+  onTap(els.btnSkip, () => goToLevel(state.levelIndex + 1));
+  onTap(els.btnPlayerMinus, () => {
     state.playersLeft = Math.max(1, state.playersLeft - 1);
     render();
     saveState();
   });
-  els.btnPlayerPlus.addEventListener("click", () => {
+  onTap(els.btnPlayerPlus, () => {
     state.playersLeft = Math.min(state.playersTotal, state.playersLeft + 1);
-    if (state.playersLeft === state.playersTotal) {
-      /* ok */
-    } else if (state.playersLeft < state.playersTotal) {
-      /* ok */
-    }
     render();
     saveState();
   });

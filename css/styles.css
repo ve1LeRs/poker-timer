@@ -151,11 +151,14 @@ body {
 }
 
 .chrome {
+  position: relative;
+  z-index: 20;
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 0.35rem;
   min-height: 2.5rem;
+  pointer-events: auto;
 }
 
 .chrome-link,
@@ -438,12 +441,6 @@ body.is-level-flash .clock {
   backdrop-filter: blur(14px);
   pointer-events: auto;
   touch-action: manipulation;
-}
-
-.chrome {
-  position: relative;
-  z-index: 20;
-  pointer-events: auto;
 }
 
 .dock-btn {
@@ -895,7 +892,7 @@ dialog.settings:not([open])::backdrop {
 @media (max-width: 640px) {
   :root { --clock-size: clamp(4.6rem, 26vw, 7rem); }
 
-  #levelLabel { font-size: clamp(2rem, 10vw, 3rem); }
+  #levelLabel { font-size: clamp(2.3rem, 11vw, 3.4rem); }
 
   .blinds-value { font-size: clamp(2.2rem, 11vw, 3.2rem); }
 
