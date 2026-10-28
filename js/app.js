@@ -259,7 +259,6 @@
     const isBreak = Boolean(level?.isBreak);
 
     document.body.classList.toggle("is-break", isBreak);
-    els.tournamentName.textContent = state.name || "Poker Timer";
 
     if (!level) {
       els.levelLabel.textContent = "Конец";
