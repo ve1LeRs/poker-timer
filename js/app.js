@@ -777,11 +777,31 @@
     reader.readAsText(file);
   }
 
+  function bindTap(el, handler) {
+    if (!el) return;
+    const run = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handler(e);
+    };
+    el.addEventListener("click", run);
+    el.addEventListener("pointerup", (e) => {
+      if (e.pointerType === "touch" || e.pointerType === "pen") run(e);
+    });
+  }
+
   // Events
-  els.btnPlay.addEventListener("click", togglePlay);
-  els.btnPrev.addEventListener("click", () => goToLevel(state.levelIndex - 1));
-  els.btnNext.addEventListener("click", () => goToLevel(state.levelIndex + 1));
-  els.btnSkip.addEventListener("click", () => goToLevel(state.levelIndex + 1));
+  bindTap(els.btnPlay, togglePlay);
+  bindTap(els.btnPrev, () => {
+    if (state.finished) {
+      state.finished = false;
+      goToLevel(state.levels.length - 1, { silent: true });
+      return;
+    }
+    goToLevel(state.levelIndex - 1);
+  });
+  bindTap(els.btnNext, () => goToLevel(state.levelIndex + 1));
+  bindTap(els.btnSkip, () => goToLevel(state.levelIndex + 1));
   els.btnPlayerMinus.addEventListener("click", () => {
     state.playersLeft = Math.max(1, state.playersLeft - 1);
     render();
@@ -805,14 +825,19 @@
   ["pointerup", "click"].forEach((evt) => {
     closeBtn?.addEventListener(evt, closeSettings);
   });
-  els.dialog.addEventListener("cancel", (e) => {
-    e.preventDefault();
+  // не preventDefault на cancel — иначе Safari может оставить dialog «призраком»
+  els.dialog.addEventListener("cancel", () => {
     closeSettings();
   });
   els.dialog.addEventListener("click", (e) => {
-    // тап по затемнению (backdrop) — закрыть
     if (e.target === els.dialog) closeSettings(e);
   });
+  // страховка: если modal остался без [open], убрать перехват тапов
+  setInterval(() => {
+    if (els.dialog && !els.dialog.open && els.dialog.hasAttribute("open")) {
+      els.dialog.removeAttribute("open");
+    }
+  }, 1000);
   els.btnTheme.addEventListener("click", () => {
     state.theme = state.theme === "dark" ? "light" : "dark";
     applyTheme();
@@ -963,6 +988,7 @@
 
   // Init — восстановить турнир после перезагрузки
   applyTheme();
+  closeSettings();
   catchUpFromStorage();
   render();
   resumeIfNeeded();
