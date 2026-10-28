@@ -779,9 +779,11 @@
 
   function bindTap(el, handler) {
     if (!el) return;
+    let last = 0;
     const run = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+      const now = Date.now();
+      if (now - last < 320) return; // iPad: pointerup + click
+      last = now;
       handler(e);
     };
     el.addEventListener("click", run);
